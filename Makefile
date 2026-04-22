@@ -1,8 +1,17 @@
-.PHONY: build up down logs test clean
+.PHONY: build up down logs test test-unit test-api clean
 
 # Build all services
 build:
 	docker-compose build
+
+# Run unit tests
+test-unit:
+	cd shared && go test ./... -v
+	cd order-service && go test ./models/... -v
+	cd payment-service && go test ./models/... -v
+
+# Run all tests
+test: test-unit
 
 # Start all services
 up:
