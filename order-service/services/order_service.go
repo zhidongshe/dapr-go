@@ -91,6 +91,10 @@ func (s *OrderService) GetOrder(ctx context.Context, orderID uint64) (*models.Or
     return s.repo.GetOrderByID(orderID)
 }
 
+func (s *OrderService) GetOrderByNo(ctx context.Context, orderNo string) (*models.Order, error) {
+    return s.repo.GetOrderByNo(orderNo)
+}
+
 func (s *OrderService) ListOrders(ctx context.Context, userID uint64, limit, offset int) ([]models.Order, error) {
     return s.repo.ListOrders(userID, limit, offset)
 }

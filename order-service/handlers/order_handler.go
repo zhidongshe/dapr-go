@@ -44,6 +44,22 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 }
 
 func (h *OrderHandler) GetOrder(c *gin.Context) {
+    // 支持通过 order_no 查询 (?order_no=xxx)
+    if orderNo := c.Query("order_no"); orderNo != "" {
+        order, err := h.service.GetOrderByNo(c.Request.Context(), orderNo)
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, dto.Error(5000, err.Error()))
+            return
+        }
+        if order == nil {
+            c.JSON(http.StatusNotFound, dto.Error(1002, "order not found"))
+            return
+        }
+        c.JSON(http.StatusOK, dto.Success(order))
+        return
+    }
+
+    // 通过 ID 查询 (/orders/:id)
     idStr := c.Param("id")
     orderID, err := strconv.ParseUint(idStr, 10, 64)
     if err != nil {
