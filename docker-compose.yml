@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: oms-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: oms_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - oms-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: oms-rededis
+    ports:
+      - "6379:6379"
+    networks:
+      - oms-network
+
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    container_name: oms-order-service
+    environment:
+      APP_PORT: "8080"
+      MYSQL_DSN: "root:rootpassword@tcp(mysql:3306)/oms_db?charset=utf8mb4&parseTime=true"
+    ports:
+      - "8080:8080"
+    networks:
+      - oms-network
+    depends_on:
+      - mysql
+      - redis
+
+  order-service-dapr:
+    image: daprio/daprd:1.12.0
+    container_name: oms-order-service-dapr
+    command: [
+      "./daprd",
+      "--app-id", "order-service",
+      "--app-port", "8080",
+      "--dapr-http-port", "3500",
+      "--components-path", "/components"
+    ]
+    volumes:
+      - ./components:/components
+    ports:
+      - "3500:3500"
+    networks:
+      - oms-network
+    depends_on:
+      - order-service
+      - redis
+
+  payment-service:
+    build:
+      context: ./payment-service
+      dockerfile: Dockerfile
+    container_name: oms-payment-service
+    environment:
+      APP_PORT: "8081"
+      ORDER_SERVICE_URL: "http://order-service:8080"
+    ports:
+      - "8081:8081"
+    networks:
+      - oms-network
+    depends_on:
+      - order-service
+      - redis
+
+  payment-service-dapr:
+    image: daprio/daprd:1.12.0
+    container_name: oms-payment-service-dapr
+    command: [
+      "./daprd",
+      "--app-id", "payment-service",
+      "--app-port", "8081",
+      "--dapr-http-port", "3501",
+      "--components-path", "/components"
+    ]
+    volumes:
+      - ./components:/components
+    ports:
+      - "3501:3501"
+    networks:
+      - oms-network
+    depends_on:
+      - payment-service
+      - redis
+
+volumes:
+  mysql_data:
+
+networks:
+  oms-network:
+    driver: bridge
