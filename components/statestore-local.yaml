@@ -1,0 +1,12 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: order-statestore
+spec:
+  type: state.mysql
+  version: v1
+  metadata:
+  - name: connectionString
+    value: "root:rootpassword@tcp(localhost:3306)/oms_db?charset=utf8mb4&parseTime=true"
+  - name: tableName
+    value: "dapr_state"
