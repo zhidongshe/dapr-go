@@ -1,17 +1,30 @@
 package handlers
 
 import (
+    "encoding/json"
+    "fmt"
     "net/http"
     "strconv"
 
     "github.com/dapr-oms/order-service/models"
     "github.com/dapr-oms/order-service/services"
     "github.com/dapr-oms/shared/dto"
+    "github.com/dapr-oms/shared/events"
     "github.com/gin-gonic/gin"
 )
 
 type OrderHandler struct {
     service *services.OrderService
+}
+
+type daprSubscription struct {
+    PubsubName string `json:"pubsubname"`
+    Topic      string `json:"topic"`
+    Route      string `json:"route"`
+}
+
+type daprPubsubEvent struct {
+    Data json.RawMessage `json:"data"`
 }
 
 func NewOrderHandler() *OrderHandler {
@@ -44,22 +57,6 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 }
 
 func (h *OrderHandler) GetOrder(c *gin.Context) {
-    // 支持通过 order_no 查询 (?order_no=xxx)
-    if orderNo := c.Query("order_no"); orderNo != "" {
-        order, err := h.service.GetOrderByNo(c.Request.Context(), orderNo)
-        if err != nil {
-            c.JSON(http.StatusInternalServerError, dto.Error(5000, err.Error()))
-            return
-        }
-        if order == nil {
-            c.JSON(http.StatusNotFound, dto.Error(1002, "order not found"))
-            return
-        }
-        c.JSON(http.StatusOK, dto.Success(order))
-        return
-    }
-
-    // 通过 ID 查询 (/orders/:id)
     idStr := c.Param("id")
     orderID, err := strconv.ParseUint(idStr, 10, 64)
     if err != nil {
@@ -81,6 +78,21 @@ func (h *OrderHandler) GetOrder(c *gin.Context) {
 }
 
 func (h *OrderHandler) ListOrders(c *gin.Context) {
+    if orderNo := c.Query("order_no"); orderNo != "" {
+        order, err := h.service.GetOrderByNo(c.Request.Context(), orderNo)
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, dto.Error(5000, err.Error()))
+            return
+        }
+        if order == nil {
+            c.JSON(http.StatusNotFound, dto.Error(1002, "order not found"))
+            return
+        }
+
+        c.JSON(http.StatusOK, dto.Success(order))
+        return
+    }
+
     userIDStr := c.Query("user_id")
     userID, err := strconv.ParseUint(userIDStr, 10, 64)
     if err != nil {
@@ -121,4 +133,55 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
     }
 
     c.JSON(http.StatusOK, dto.Success(nil))
+}
+
+func (h *OrderHandler) DaprSubscribe(c *gin.Context) {
+    c.JSON(http.StatusOK, []daprSubscription{
+        {
+            PubsubName: "order-pubsub",
+            Topic:      events.TopicOrderPaid,
+            Route:      "/events/order-paid",
+        },
+    })
+}
+
+func (h *OrderHandler) HandleOrderPaid(c *gin.Context) {
+    var message daprPubsubEvent
+    if err := c.ShouldBindJSON(&message); err != nil {
+        c.JSON(http.StatusBadRequest, dto.Error(1001, err.Error()))
+        return
+    }
+
+    event, err := decodeOrderPaidEvent(message.Data)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, dto.Error(1001, err.Error()))
+        return
+    }
+
+    fmt.Printf("received order-paid event: order_id=%d order_no=%s pay_method=%s\n", event.OrderID, event.OrderNo, event.PayMethod)
+
+    if err := h.service.HandleOrderPaid(c.Request.Context(), event); err != nil {
+        c.JSON(http.StatusInternalServerError, dto.Error(5000, err.Error()))
+        return
+    }
+
+    c.JSON(http.StatusOK, dto.Success(nil))
+}
+
+func decodeOrderPaidEvent(data json.RawMessage) (*events.OrderPaidEvent, error) {
+    var event events.OrderPaidEvent
+    if err := json.Unmarshal(data, &event); err == nil {
+        return &event, nil
+    }
+
+    var payload string
+    if err := json.Unmarshal(data, &payload); err != nil {
+        return nil, err
+    }
+
+    if err := json.Unmarshal([]byte(payload), &event); err != nil {
+        return nil, err
+    }
+
+    return &event, nil
 }

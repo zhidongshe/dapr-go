@@ -75,13 +75,16 @@ func (r *OrderRepository) CreateOrder(order *models.Order) error {
 
 func (r *OrderRepository) GetOrderByID(orderID uint64) (*models.Order, error) {
     order := &models.Order{}
+    var payMethod, remark sql.NullString
     err := r.db.QueryRow(
         `SELECT id, order_no, user_id, total_amount, status, pay_status, pay_time,
                 pay_method, remark, created_at, updated_at
          FROM orders WHERE id = ?`, orderID,
     ).Scan(&order.ID, &order.OrderNo, &order.UserID, &order.TotalAmount,
-        &order.Status, &order.PayStatus, &order.PayTime, &order.PayMethod,
-        &order.Remark, &order.CreatedAt, &order.UpdatedAt)
+        &order.Status, &order.PayStatus, &order.PayTime, &payMethod,
+        &remark, &order.CreatedAt, &order.UpdatedAt)
+    order.PayMethod = payMethod.String
+    order.Remark = remark.String
 
     if err == sql.ErrNoRows {
         return nil, nil
@@ -114,13 +117,16 @@ func (r *OrderRepository) GetOrderByID(orderID uint64) (*models.Order, error) {
 
 func (r *OrderRepository) GetOrderByNo(orderNo string) (*models.Order, error) {
     order := &models.Order{}
+    var payMethod, remark sql.NullString
     err := r.db.QueryRow(
         `SELECT id, order_no, user_id, total_amount, status, pay_status, pay_time,
                 pay_method, remark, created_at, updated_at
          FROM orders WHERE order_no = ?`, orderNo,
     ).Scan(&order.ID, &order.OrderNo, &order.UserID, &order.TotalAmount,
-        &order.Status, &order.PayStatus, &order.PayTime, &order.PayMethod,
-        &order.Remark, &order.CreatedAt, &order.UpdatedAt)
+        &order.Status, &order.PayStatus, &order.PayTime, &payMethod,
+        &remark, &order.CreatedAt, &order.UpdatedAt)
+    order.PayMethod = payMethod.String
+    order.Remark = remark.String
 
     if err == sql.ErrNoRows {
         return nil, nil

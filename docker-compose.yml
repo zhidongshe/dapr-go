@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   mysql:
     image: mysql:8.0
@@ -14,30 +12,43 @@ services:
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     networks:
       - oms-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   redis:
     image: redis:7-alpine
-    container_name: oms-rededis
+    container_name: oms-redis
     ports:
       - "6379:6379"
     networks:
       - oms-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   order-service:
     build:
-      context: ./order-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: order-service/Dockerfile
     container_name: oms-order-service
     environment:
       APP_PORT: "8080"
       MYSQL_DSN: "root:rootpassword@tcp(mysql:3306)/oms_db?charset=utf8mb4&parseTime=true"
     ports:
       - "8080:8080"
+      - "3500:3500"
     networks:
       - oms-network
     depends_on:
-      - mysql
-      - redis
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   order-service-dapr:
     image: daprio/daprd:1.12.0
@@ -51,29 +62,28 @@ services:
     ]
     volumes:
       - ./components:/components
-    ports:
-      - "3500:3500"
-    networks:
-      - oms-network
+    network_mode: "service:order-service"
     depends_on:
       - order-service
-      - redis
 
   payment-service:
     build:
-      context: ./payment-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: payment-service/Dockerfile
     container_name: oms-payment-service
     environment:
       APP_PORT: "8081"
       ORDER_SERVICE_URL: "http://order-service:8080"
     ports:
       - "8081:8081"
+      - "3501:3501"
     networks:
       - oms-network
     depends_on:
-      - order-service
-      - redis
+      order-service:
+        condition: service_started
+      redis:
+        condition: service_healthy
 
   payment-service-dapr:
     image: daprio/daprd:1.12.0
@@ -87,13 +97,9 @@ services:
     ]
     volumes:
       - ./components:/components
-    ports:
-      - "3501:3501"
-    networks:
-      - oms-network
+    network_mode: "service:payment-service"
     depends_on:
       - payment-service
-      - redis
 
 volumes:
   mysql_data:

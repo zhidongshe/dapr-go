@@ -3,9 +3,11 @@
 ## 1. 概述
 
 ### 1.1 项目目标
+
 构建一个基于Dapr的订单管理系统(OMS)，实现订单创建、支付和状态管理，通过消息队列将订单状态变化通知下游系统。
 
 ### 1.2 技术栈
+
 - **语言**: Go 1.21+
 - **微服务框架**: Dapr (Sidecar模式)
 - **状态存储**: MySQL 8.0
@@ -49,10 +51,10 @@
 
 ### 2.2 服务职责
 
-| 服务 | 职责 | 端口 |
-|------|------|------|
-| Order Service | 订单CRUD、状态管理、发布状态变更事件 | 8080 (app) / 3500 (dapr) |
-| Payment Service | 处理支付请求、更新订单支付状态 | 8081 (app) / 3501 (dapr) |
+| 服务              | 职责                   | 端口                       |
+| --------------- | -------------------- | ------------------------ |
+| Order Service   | 订单CRUD、状态管理、发布状态变更事件 | 8080 (app) / 3500 (dapr) |
+| Payment Service | 处理支付请求、更新订单支付状态      | 8081 (app) / 3501 (dapr) |
 
 ## 3. 数据模型
 
@@ -114,23 +116,24 @@ const (
 
 ### 4.1 Order Service API
 
-| 方法 | 路径 | 描述 |
-|------|------|------|
-| POST | /api/v1/orders | 创建订单 |
-| GET | /api/v1/orders/:id | 查询订单详情 |
-| GET | /api/v1/orders | 查询订单列表 |
-| POST | /api/v1/orders/:id/cancel | 取消订单 |
+| 方法   | 路径                        | 描述     |
+| ---- | ------------------------- | ------ |
+| POST | /api/v1/orders            | 创建订单   |
+| GET  | /api/v1/orders/:id        | 查询订单详情 |
+| GET  | /api/v1/orders            | 查询订单列表 |
+| POST | /api/v1/orders/:id/cancel | 取消订单   |
 
 ### 4.2 Payment Service API
 
-| 方法 | 路径 | 描述 |
-|------|------|------|
-| POST | /api/v1/payments | 发起支付 |
+| 方法   | 路径                        | 描述       |
+| ---- | ------------------------- | -------- |
+| POST | /api/v1/payments          | 发起支付     |
 | POST | /api/v1/payments/callback | 支付回调(模拟) |
 
 ### 4.3 请求/响应示例
 
 **创建订单：**
+
 ```http
 POST /api/v1/orders
 Content-Type: application/json
@@ -163,6 +166,7 @@ Response:
 ```
 
 **发起支付：**
+
 ```http
 POST /api/v1/payments
 Content-Type: application/json
@@ -221,12 +225,12 @@ spec:
 
 ### 6.1 事件类型
 
-| Topic | 描述 | 生产者 | 消费者 |
-|-------|------|--------|--------|
-| order-created | 订单创建 | Order Service | 下游系统 |
-| order-paid | 订单已支付 | Payment Service | 下游系统、Order Service |
-| order-cancelled | 订单取消 | Order Service | 下游系统 |
-| order-status-changed | 状态变更 | Order Service | 下游系统 |
+| Topic                | 描述    | 生产者             | 消费者                |
+| -------------------- | ----- | --------------- | ------------------ |
+| order-created        | 订单创建  | Order Service   | 下游系统               |
+| order-paid           | 订单已支付 | Payment Service | 下游系统、Order Service |
+| order-cancelled      | 订单取消  | Order Service   | 下游系统               |
+| order-status-changed | 状态变更  | Order Service   | 下游系统               |
 
 ### 6.2 事件格式 (CloudEvents)
 
@@ -264,6 +268,7 @@ client.InvokeMethod(ctx, "payment-service", "v1/payments", "POST", paymentReq)
 ### 7.2 Payment Service → Order Service (状态更新)
 
 Payment Service支付成功后：
+
 1. 通过Dapr State API更新订单状态
 2. 发布 `order-paid` 事件到Redis Pub/Sub
 3. Order Service订阅事件并处理
@@ -333,18 +338,19 @@ docker-compose down
 
 ### 9.2 端口映射
 
-| 服务 | 端口 | 说明 |
-|------|------|------|
-| Order Service | 8080 | HTTP API |
-| Order Dapr | 3500 | Dapr Sidecar HTTP |
-| Payment Service | 8081 | HTTP API |
-| Payment Dapr | 3501 | Dapr Sidecar HTTP |
-| MySQL | 3306 | 数据库 |
-| Redis | 6379 | 消息队列 |
+| 服务              | 端口   | 说明                |
+| --------------- | ---- | ----------------- |
+| Order Service   | 8080 | HTTP API          |
+| Order Dapr      | 3500 | Dapr Sidecar HTTP |
+| Payment Service | 8081 | HTTP API          |
+| Payment Dapr    | 3501 | Dapr Sidecar HTTP |
+| MySQL           | 3306 | 数据库               |
+| Redis           | 6379 | 消息队列              |
 
 ## 10. 测试验证
 
 ### 10.1 创建订单
+
 ```bash
 curl -X POST http://localhost:8080/api/v1/orders \
   -H "Content-Type: application/json" \
@@ -352,6 +358,7 @@ curl -X POST http://localhost:8080/api/v1/orders \
 ```
 
 ### 10.2 支付订单
+
 ```bash
 curl -X POST http://localhost:8081/api/v1/payments \
   -H "Content-Type: application/json" \
@@ -372,14 +379,14 @@ type Response struct {
 
 ### 11.2 错误码定义
 
-| 错误码 | 说明 |
-|--------|------|
-| 0 | 成功 |
-| 1001 | 参数错误 |
-| 1002 | 订单不存在 |
+| 错误码  | 说明     |
+| ---- | ------ |
+| 0    | 成功     |
+| 1001 | 参数错误   |
+| 1002 | 订单不存在  |
 | 1003 | 订单状态非法 |
-| 1004 | 支付失败 |
-| 5000 | 系统错误 |
+| 1004 | 支付失败   |
+| 5000 | 系统错误   |
 
 ## 12. 扩展性考虑
 

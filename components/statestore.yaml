@@ -7,6 +7,6 @@ spec:
   version: v1
   metadata:
   - name: connectionString
-    value: "root:rootpassword@tcp(mysql:3306)/oms_db?charset=utf8mb4&parseTime=true"
+    value: "root:rootpassword@tcp(mysql:3306)/"
   - name: tableName
     value: "dapr_state"

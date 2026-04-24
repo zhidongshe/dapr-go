@@ -1,11 +1,27 @@
-FROM golang:1.21-alpine AS builder
+FROM golang:1.26-alpine AS builder
+
+# Enable Go toolchain auto-upgrade
+ENV GOTOOLCHAIN=auto
 
 WORKDIR /app
-COPY go.mod go.sum ./
+
+# Copy shared module first (from root context)
+COPY shared/ /shared/
+
+# Copy go mod files
+COPY payment-service/go.mod payment-service/go.sum ./
+
+# Update go.mod to use correct path for shared module
+RUN sed -i 's|=> ../shared|=> /shared|g' go.mod
+
+# Download dependencies (toolchain will auto-upgrade if needed)
 RUN go mod download
 
-COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o payment-service .
+# Copy source code
+COPY payment-service/ .
+
+# Tidy and build
+RUN go mod tidy && CGO_ENABLED=0 GOOS=linux go build -o payment-service .
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates

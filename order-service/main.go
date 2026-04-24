@@ -27,6 +27,9 @@ func main() {
         api.POST("/orders/:id/cancel", orderHandler.CancelOrder)
     }
 
+    r.GET("/dapr/subscribe", orderHandler.DaprSubscribe)
+    r.POST("/events/order-paid", orderHandler.HandleOrderPaid)
+
     r.GET("/health", func(c *gin.Context) {
         c.JSON(http.StatusOK, gin.H{"status": "ok"})
     })

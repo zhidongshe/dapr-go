@@ -58,8 +58,11 @@ dapr-oms/
 **说明:** 创建共享的事件定义和DTO结构，供两个服务使用。
 
 **Files:**
+
 - Create: `shared/go.mod`
+
 - Create: `shared/dto/response.go`
+
 - Create: `shared/events/order_events.go`
 
 - [ ] **Step 1.1: 创建shared模块**
@@ -73,6 +76,7 @@ go mod init github.com/dapr-oms/shared
 - [ ] **Step 1.2: 编写DTO响应结构**
 
 Create: `shared/dto/response.go`
+
 ```go
 package dto
 
@@ -101,6 +105,7 @@ func Error(code int, message string) Response {
 - [ ] **Step 1.3: 编写订单事件定义**
 
 Create: `shared/events/order_events.go`
+
 ```go
 package events
 
@@ -178,11 +183,13 @@ git commit -m "feat(shared): add common DTO and event definitions"
 ## Task 2: 数据库初始化脚本
 
 **Files:**
+
 - Create: `scripts/init-db.sql`
 
 - [ ] **Step 2.1: 编写数据库初始化脚本**
 
 Create: `scripts/init-db.sql`
+
 ```sql
 CREATE DATABASE IF NOT EXISTS oms_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -231,12 +238,15 @@ git commit -m "feat(db): add MySQL initialization script"
 ## Task 3: Dapr组件配置
 
 **Files:**
+
 - Create: `components/statestore.yaml`
+
 - Create: `components/pubsub.yaml`
 
 - [ ] **Step 3.1: 创建State Store组件配置**
 
 Create: `components/statestore.yaml`
+
 ```yaml
 apiVersion: dapr.io/v1alpha1
 kind: Component
@@ -255,6 +265,7 @@ spec:
 - [ ] **Step 3.2: 创建Pub/Sub组件配置**
 
 Create: `components/pubsub.yaml`
+
 ```yaml
 apiVersion: dapr.io/v1alpha1
 kind: Component
@@ -286,8 +297,11 @@ git commit -m "feat(dapr): add statestore and pubsub component configs"
 ## Task 4: Order Service - 基础结构
 
 **Files:**
+
 - Create: `order-service/go.mod`
+
 - Create: `order-service/main.go`
+
 - Create: `order-service/Dockerfile`
 
 - [ ] **Step 4.1: 创建Order Service模块**
@@ -301,6 +315,7 @@ go mod init github.com/dapr-oms/order-service
 - [ ] **Step 4.2: 编写main.go**
 
 Create: `order-service/main.go`
+
 ```go
 package main
 
@@ -345,6 +360,7 @@ func main() {
 - [ ] **Step 4.3: 编写Dockerfile**
 
 Create: `order-service/Dockerfile`
+
 ```dockerfile
 FROM golang:1.21-alpine AS builder
 
@@ -375,11 +391,13 @@ git commit -m "feat(order-service): add basic service structure"
 ## Task 5: Order Service - 模型定义
 
 **Files:**
+
 - Create: `order-service/models/order.go`
 
 - [ ] **Step 5.1: 编写订单模型**
 
 Create: `order-service/models/order.go`
+
 ```go
 package models
 
@@ -454,11 +472,13 @@ git commit -m "feat(order-service): add order models"
 ## Task 6: Order Service - Repository层
 
 **Files:**
+
 - Create: `order-service/repository/order_repo.go`
 
 - [ ] **Step 6.1: 编写订单仓库**
 
 Create: `order-service/repository/order_repo.go`
+
 ```go
 package repository
 
@@ -480,15 +500,15 @@ func NewOrderRepository(dsn string) (*OrderRepository, error) {
     if err != nil {
         return nil, err
     }
-    
+
     db.SetMaxOpenConns(25)
     db.SetMaxIdleConns(10)
     db.SetConnMaxLifetime(5 * time.Minute)
-    
+
     if err := db.Ping(); err != nil {
         return nil, err
     }
-    
+
     return &OrderRepository{db: db}, nil
 }
 
@@ -520,7 +540,7 @@ func (r *OrderRepository) CreateOrder(order *models.Order) error {
         item := &order.Items[i]
         item.OrderID = order.ID
         item.TotalPrice = float64(item.Quantity) * item.UnitPrice
-        
+
         _, err = tx.Exec(
             `INSERT INTO order_items (order_id, product_id, product_name, unit_price, quantity, total_price, created_at) 
              VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -544,7 +564,7 @@ func (r *OrderRepository) GetOrderByID(orderID uint64) (*models.Order, error) {
     ).Scan(&order.ID, &order.OrderNo, &order.UserID, &order.TotalAmount,
         &order.Status, &order.PayStatus, &order.PayTime, &order.PayMethod,
         &order.Remark, &order.CreatedAt, &order.UpdatedAt)
-    
+
     if err == sql.ErrNoRows {
         return nil, nil
     }
@@ -583,7 +603,7 @@ func (r *OrderRepository) GetOrderByNo(orderNo string) (*models.Order, error) {
     ).Scan(&order.ID, &order.OrderNo, &order.UserID, &order.TotalAmount,
         &order.Status, &order.PayStatus, &order.PayTime, &order.PayMethod,
         &order.Remark, &order.CreatedAt, &order.UpdatedAt)
-    
+
     if err == sql.ErrNoRows {
         return nil, nil
     }
@@ -612,7 +632,7 @@ func (r *OrderRepository) UpdatePayStatus(orderID uint64, payStatus int, payTime
 func (r *OrderRepository) ListOrders(userID uint64, limit, offset int) ([]models.Order, error) {
     query := `SELECT id, order_no, user_id, total_amount, status, pay_status, created_at 
               FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`
-    
+
     rows, err := r.db.Query(query, userID, limit, offset)
     if err != nil {
         return nil, err
@@ -646,11 +666,13 @@ git commit -m "feat(order-service): add order repository"
 ## Task 7: Order Service - Handler层
 
 **Files:**
+
 - Create: `order-service/handlers/order_handler.go`
 
 - [ ] **Step 7.1: 编写Order Handler**
 
 Create: `order-service/handlers/order_handler.go`
+
 ```go
 package handlers
 
@@ -775,11 +797,13 @@ git commit -m "feat(order-service): add order handlers"
 ## Task 8: Order Service - Service层与Dapr集成
 
 **Files:**
+
 - Create: `order-service/services/order_service.go`
 
 - [ ] **Step 8.1: 编写Order Service业务逻辑**
 
 Create: `order-service/services/order_service.go`
+
 ```go
 package services
 
@@ -1004,8 +1028,11 @@ git commit -m "feat(order-service): add service layer with Dapr integration"
 ## Task 9: Payment Service - 基础结构
 
 **Files:**
+
 - Create: `payment-service/go.mod`
+
 - Create: `payment-service/main.go`
+
 - Create: `payment-service/Dockerfile`
 
 - [ ] **Step 9.1: 创建Payment Service模块**
@@ -1019,6 +1046,7 @@ go mod init github.com/dapr-oms/payment-service
 - [ ] **Step 9.2: 编写main.go**
 
 Create: `payment-service/main.go`
+
 ```go
 package main
 
@@ -1061,6 +1089,7 @@ func main() {
 - [ ] **Step 9.3: 编写Dockerfile**
 
 Create: `payment-service/Dockerfile`
+
 ```dockerfile
 FROM golang:1.21-alpine AS builder
 
@@ -1091,12 +1120,15 @@ git commit -m "feat(payment-service): add basic service structure"
 ## Task 10: Payment Service - 模型与Handler
 
 **Files:**
+
 - Create: `payment-service/models/payment.go`
+
 - Create: `payment-service/handlers/payment_handler.go`
 
 - [ ] **Step 10.1: 编写Payment模型**
 
 Create: `payment-service/models/payment.go`
+
 ```go
 package models
 
@@ -1138,6 +1170,7 @@ func GenerateTransactionID() string {
 - [ ] **Step 10.2: 编写Payment Handler**
 
 Create: `payment-service/handlers/payment_handler.go`
+
 ```go
 package handlers
 
@@ -1204,11 +1237,13 @@ git commit -m "feat(payment-service): add models and handlers"
 ## Task 11: Payment Service - Service层
 
 **Files:**
+
 - Create: `payment-service/services/payment_service.go`
 
 - [ ] **Step 11.1: 编写Payment Service业务逻辑**
 
 Create: `payment-service/services/payment_service.go`
+
 ```go
 package services
 
@@ -1264,7 +1299,7 @@ func (s *PaymentService) ProcessPayment(ctx context.Context, req *models.CreateP
 
     // Simulate payment processing
     transactionID := models.GenerateTransactionID()
-    
+
     // In real scenario, this would call payment gateway
     // For demo, we simulate successful payment
     paySuccess := true
@@ -1328,7 +1363,7 @@ func (s *PaymentService) HandleCallback(ctx context.Context, req *models.Payment
 func (s *PaymentService) getOrderByNo(ctx context.Context, orderNo string) (*models.OrderInfo, error) {
     // Use Dapr service invocation or direct HTTP call
     url := fmt.Sprintf("%s/api/v1/orders?order_no=%s", s.orderServiceURL, orderNo)
-    
+
     req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
     if err != nil {
         return nil, err
@@ -1365,6 +1400,7 @@ func (s *PaymentService) getOrderByNo(ctx context.Context, orderNo string) (*mod
 - [ ] **Step 11.2: 添加缺失的import**
 
 在 `payment-service/models/payment.go` 中添加:
+
 ```go
 import (
     "fmt"
@@ -1393,11 +1429,13 @@ git commit -m "feat(payment-service): add payment service layer with Dapr pub/su
 ## Task 12: Docker Compose编排
 
 **Files:**
+
 - Create: `docker-compose.yml`
 
 - [ ] **Step 12.1: 编写Docker Compose配置**
 
 Create: `docker-compose.yml`
+
 ```yaml
 version: '3.8'
 
@@ -1516,66 +1554,70 @@ git commit -m "feat(deploy): add docker-compose orchestration"
 ## Task 13: Makefile和文档
 
 **Files:**
+
 - Create: `Makefile`
+
 - Create: `README.md`
 
 - [ ] **Step 13.1: 编写Makefile**
 
 Create: `Makefile`
+
 ```makefile
 .PHONY: build up down logs test clean
 
 # Build all services
 build:
-	docker-compose build
+    docker-compose build
 
 # Start all services
 up:
-	docker-compose up -d
+    docker-compose up -d
 
 # Stop all services
 down:
-	docker-compose down
+    docker-compose down
 
 # View logs
 logs:
-	docker-compose logs -f
+    docker-compose logs -f
 
 # Test order creation
 test-create-order:
-	curl -X POST http://localhost:8080/api/v1/orders \
-		-H "Content-Type: application/json" \
-		-d '{"user_id":10001,"items":[{"product_id":101,"product_name":"iPhone 15","unit_price":5999,"quantity":1}]}'
+    curl -X POST http://localhost:8080/api/v1/orders \
+        -H "Content-Type: application/json" \
+        -d '{"user_id":10001,"items":[{"product_id":101,"product_name":"iPhone 15","unit_price":5999,"quantity":1}]}'
 
 # Test get order
 test-get-order:
-	curl http://localhost:8080/api/v1/orders/1
+    curl http://localhost:8080/api/v1/orders/1
 
 # Test list orders
 test-list-orders:
-	curl "http://localhost:8080/api/v1/orders?user_id=10001"
+    curl "http://localhost:8080/api/v1/orders?user_id=10001"
 
 # Test payment
 test-payment:
-	curl -X POST http://localhost:8081/api/v1/payments \
-		-H "Content-Type: application/json" \
-		-d '{"order_no":"ORD202504220001","pay_method":"alipay"}'
+    curl -X POST http://localhost:8081/api/v1/payments \
+        -H "Content-Type: application/json" \
+        -d '{"order_no":"ORD202504220001","pay_method":"alipay"}'
 
 # Test cancel order
 test-cancel-order:
-	curl -X POST http://localhost:8080/api/v1/orders/1/cancel \
-		-H "Content-Type: application/json" \
-		-d '{"reason":"test cancellation"}'
+    curl -X POST http://localhost:8080/api/v1/orders/1/cancel \
+        -H "Content-Type: application/json" \
+        -d '{"reason":"test cancellation"}'
 
 # Clean up
 clean:
-	docker-compose down -v
-	docker system prune -f
+    docker-compose down -v
+    docker system prune -f
 ```
 
 - [ ] **Step 13.2: 编写README.md**
 
 Create: `README.md`
+
 ```markdown
 # Dapr OMS 订单管理系统
 
@@ -1621,18 +1663,18 @@ curl -X POST http://localhost:8080/api/v1/orders/1/cancel
 
 ### Order Service
 
-| 方法 | 路径 | 描述 |
-|------|------|------|
-| POST | /api/v1/orders | 创建订单 |
-| GET | /api/v1/orders/:id | 查询订单详情 |
-| GET | /api/v1/orders?user_id=xxx | 查询订单列表 |
-| POST | /api/v1/orders/:id/cancel | 取消订单 |
+| 方法   | 路径                         | 描述     |
+| ---- | -------------------------- | ------ |
+| POST | /api/v1/orders             | 创建订单   |
+| GET  | /api/v1/orders/:id         | 查询订单详情 |
+| GET  | /api/v1/orders?user_id=xxx | 查询订单列表 |
+| POST | /api/v1/orders/:id/cancel  | 取消订单   |
 
 ### Payment Service
 
-| 方法 | 路径 | 描述 |
-|------|------|------|
-| POST | /api/v1/payments | 发起支付 |
+| 方法   | 路径                        | 描述   |
+| ---- | ------------------------- | ---- |
+| POST | /api/v1/payments          | 发起支付 |
 | POST | /api/v1/payments/callback | 支付回调 |
 
 ## 订单状态
@@ -1661,8 +1703,8 @@ make logs
 # 停止并清理
 make down
 ```
-```
 
+```
 - [ ] **Step 13.3: Commit**
 
 ```bash
@@ -1677,17 +1719,21 @@ git commit -m "feat(docs): add Makefile and README"
 **说明:** 让order-service和payment-service正确引用shared模块
 
 **Files:**
+
 - Modify: `order-service/go.mod`
+
 - Modify: `payment-service/go.mod`
 
 - [ ] **Step 14.1: 更新order-service引用shared**
 
 在 `order-service/go.mod` 中添加:
+
 ```
 replace github.com/dapr-oms/shared => ../shared
 ```
 
 运行:
+
 ```bash
 cd order-service
 go mod edit -replace github.com/dapr-oms/shared=../shared
@@ -1697,11 +1743,13 @@ go mod tidy
 - [ ] **Step 14.2: 更新payment-service引用shared**
 
 在 `payment-service/go.mod` 中添加:
+
 ```
 replace github.com/dapr-oms/shared => ../shared
 ```
 
 运行:
+
 ```bash
 cd payment-service
 go mod edit -replace github.com/dapr-oms/shared=../shared
@@ -1726,6 +1774,7 @@ git commit -m "fix(deps): add shared module local replace"
 ```bash
 docker-compose config
 ```
+
 Expected: 无错误，显示配置内容
 
 - [ ] **Step 15.2: 构建镜像**
@@ -1733,6 +1782,7 @@ Expected: 无错误，显示配置内容
 ```bash
 make build
 ```
+
 Expected: 两个服务都成功构建
 
 - [ ] **Step 15.3: 启动服务并测试**
@@ -1756,21 +1806,23 @@ git commit -m "chore: finalize project setup"
 
 ### 1. 设计文档覆盖度
 
-| 设计文档需求 | 实现任务 |
-|-------------|----------|
-| 订单CRUD | Task 7, 8 |
-| 支付功能 | Task 10, 11 |
-| Dapr State Store (MySQL) | Task 3, 6 |
-| Dapr Pub/Sub (Redis) | Task 3, 8, 11 |
-| 服务间通信 | Task 8, 11 |
-| Docker Compose部署 | Task 12 |
-| API接口 | Task 7, 10 |
+| 设计文档需求                   | 实现任务          |
+| ------------------------ | ------------- |
+| 订单CRUD                   | Task 7, 8     |
+| 支付功能                     | Task 10, 11   |
+| Dapr State Store (MySQL) | Task 3, 6     |
+| Dapr Pub/Sub (Redis)     | Task 3, 8, 11 |
+| 服务间通信                    | Task 8, 11    |
+| Docker Compose部署         | Task 12       |
+| API接口                    | Task 7, 10    |
 
 ### 2. 无占位符检查
+
 - ✅ 所有代码都是完整的，无TBD/TODO
 - ✅ 所有任务都包含具体命令和代码
 
 ### 3. 类型一致性
+
 - ✅ 订单状态常量在所有文件中使用 `events.OrderStatusPending` 等
 - ✅ 响应格式统一使用 `dto.Response`
 - ✅ 事件类型统一使用 `events.TopicOrderCreated` 等
