@@ -102,6 +102,41 @@ services:
     depends_on:
       - payment-service
 
+  inventory-service:
+    build:
+      context: .
+      dockerfile: inventory-service/Dockerfile
+    container_name: oms-inventory-service
+    environment:
+      APP_PORT: "8082"
+      MYSQL_DSN: "root:rootpassword@tcp(mysql:3306)/oms_db?charset=utf8mb4&parseTime=true"
+    ports:
+      - "8082:8082"
+      - "3502:3502"
+    networks:
+      - oms-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  inventory-service-dapr:
+    image: daprio/daprd:1.12.0
+    container_name: oms-inventory-service-dapr
+    command: [
+      "./daprd",
+      "--app-id", "inventory-service",
+      "--app-port", "8082",
+      "--dapr-http-port", "3502",
+      "--components-path", "/components"
+    ]
+    volumes:
+      - ./components:/components
+    network_mode: "service:inventory-service"
+    depends_on:
+      - inventory-service
+
 volumes:
   mysql_data:
 
