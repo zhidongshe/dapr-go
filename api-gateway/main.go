@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/dapr-oms/api-gateway/handlers"
+	"github.com/dapr-oms/api-gateway/middleware"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,7 +18,14 @@ func main() {
 
 	r := gin.Default()
 
-	// Health check
+	// CORS
+	r.Use(middleware.CORS())
+
+	// 公开接口
+	r.POST("/api/auth/login", handlers.Login)
+	r.POST("/api/auth/logout", handlers.Logout)
+
+	// 健康检查
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
