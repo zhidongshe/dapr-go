@@ -28,6 +28,7 @@ func main() {
 	// 需要认证的接口
 	api := r.Group("/api")
 	{
+		handlers.RegisterDashboardRoutes(api)
 		handlers.RegisterOrderRoutes(api)
 	}
 
