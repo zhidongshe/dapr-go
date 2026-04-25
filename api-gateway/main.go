@@ -25,6 +25,12 @@ func main() {
 	r.POST("/api/auth/login", handlers.Login)
 	r.POST("/api/auth/logout", handlers.Logout)
 
+	// 需要认证的接口
+	api := r.Group("/api")
+	{
+		handlers.RegisterOrderRoutes(api)
+	}
+
 	// 健康检查
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
