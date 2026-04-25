@@ -3,10 +3,11 @@ package events
 import "time"
 
 const (
-	TopicOrderCreated       = "order-created"
-	TopicOrderPaid          = "order-paid"
-	TopicOrderCancelled     = "order-cancelled"
-	TopicOrderStatusChanged = "order-status-changed"
+	TopicOrderCreated        = "order-created"
+	TopicOrderPaid           = "order-paid"
+	TopicOrderCancelled      = "order-cancelled"
+	TopicOrderStatusChanged  = "order-status-changed"
+	TopicOrderTimeoutCheck   = "order-timeout-check"
 )
 
 const (
@@ -59,4 +60,11 @@ type OrderStatusChangedEvent struct {
 	OldStatus int       `json:"old_status"`
 	NewStatus int       `json:"new_status"`
 	ChangedAt time.Time `json:"changed_at"`
+}
+
+type OrderTimeoutCheckEvent struct {
+	OrderID   int64     `json:"order_id"`
+	OrderNo   string    `json:"order_no"`
+	CreatedAt time.Time `json:"created_at"`
+	CheckAt   time.Time `json:"check_at"`
 }
