@@ -108,6 +108,19 @@ func (s *OrderService) CreateOrder(ctx context.Context, req *models.CreateOrderR
 		fmt.Printf("failed to publish status changed event: %v\n", err)
 	}
 
+	// Publish inventory reserve event
+	inventoryEvent := events.InventoryReserveEvent{
+		MessageID: generateUUID(),
+		OrderID:   int64(order.ID),
+		OrderNo:   order.OrderNo,
+		UserID:    int64(order.UserID),
+		Items:     convertToInventoryItems(order.Items),
+		CreatedAt: time.Now(),
+	}
+	if err := s.publishEvent(ctx, events.TopicInventoryReserve, inventoryEvent); err != nil {
+		fmt.Printf("failed to publish inventory reserve event: %v\n", err)
+	}
+
 	// Schedule timeout check using background goroutine
 	go s.scheduleTimeoutCheck(order)
 
@@ -232,6 +245,18 @@ func (s *OrderService) CancelOrder(ctx context.Context, orderID uint64, reason s
 		fmt.Printf("failed to publish order cancelled event: %v\n", err)
 	}
 
+	// Publish inventory release event
+	releaseEvent := events.InventoryReleaseEvent{
+		MessageID:  generateUUID(),
+		OrderID:    int64(order.ID),
+		OrderNo:    order.OrderNo,
+		Reason:     reason,
+		ReleasedAt: time.Now(),
+	}
+	if err := s.publishEvent(ctx, events.TopicInventoryRelease, releaseEvent); err != nil {
+		fmt.Printf("failed to publish inventory release event: %v\n", err)
+	}
+
 	return nil
 }
 
@@ -254,6 +279,17 @@ func (s *OrderService) HandleOrderPaid(ctx context.Context, event *events.OrderP
 		return err
 	}
 
+	// Publish inventory confirm event
+	confirmEvent := events.InventoryConfirmEvent{
+		MessageID:   generateUUID(),
+		OrderID:     event.OrderID,
+		OrderNo:     event.OrderNo,
+		ConfirmedAt: time.Now(),
+	}
+	if err := s.publishEvent(ctx, events.TopicInventoryConfirm, confirmEvent); err != nil {
+		fmt.Printf("failed to publish inventory confirm event: %v\n", err)
+	}
+
 	return nil
 }
 
@@ -264,4 +300,21 @@ func (s *OrderService) publishEvent(ctx context.Context, topic string, data inte
 	}
 
 	return s.daprClient.PublishEvent(ctx, "order-pubsub", topic, payload)
+}
+
+func convertToInventoryItems(items []models.OrderItem) []events.InventoryItem {
+	result := make([]events.InventoryItem, len(items))
+	for i, item := range items {
+		result[i] = events.InventoryItem{
+			ProductID:   int64(item.ProductID),
+			ProductName: item.ProductName,
+			Quantity:    item.Quantity,
+		}
+	}
+	return result
+}
+
+func generateUUID() string {
+	// Simple UUID v4 generation - in production use proper UUID library
+	return fmt.Sprintf("%d-%d", time.Now().UnixNano(), time.Now().Unix())
 }
