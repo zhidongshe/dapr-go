@@ -1,0 +1,7 @@
+FROM redis:7-alpine
+
+RUN apk --no-cache add ca-certificates
+WORKDIR /root/
+COPY order-service/order-service .
+EXPOSE 8080
+CMD ["./order-service"]
