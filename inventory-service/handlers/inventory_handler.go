@@ -1,11 +1,14 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 
+	"github.com/dapr-oms/inventory-service/repository"
 	"github.com/dapr-oms/inventory-service/services"
 	"github.com/dapr-oms/shared/dto"
 	"github.com/dapr-oms/shared/events"
@@ -13,7 +16,8 @@ import (
 )
 
 type InventoryHandler struct {
-	service *services.InventoryService
+	service     *services.InventoryService
+	messageRepo *repository.MessageRepository
 }
 
 type daprSubscription struct {
@@ -27,8 +31,22 @@ type daprPubsubMessage struct {
 }
 
 func NewInventoryHandler() *InventoryHandler {
+	service := services.NewInventoryService()
+
+	// Initialize message repository for idempotency
+	dsn := os.Getenv("MYSQL_DSN")
+	if dsn == "" {
+		dsn = "root:rootpassword@tcp(mysql:3306)/oms_db?charset=utf8mb4&parseTime=true"
+	}
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		panic(fmt.Sprintf("failed to connect to database for message repository: %v", err))
+	}
+	messageRepo := repository.NewMessageRepository(db)
+
 	return &InventoryHandler{
-		service: services.NewInventoryService(),
+		service:     service,
+		messageRepo: messageRepo,
 	}
 }
 
@@ -88,6 +106,17 @@ func (h *InventoryHandler) HandleReserve(c *gin.Context) {
 	event, err := decodeReserveEvent(msg.Data)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.Error(1001, err.Error()))
+		return
+	}
+
+	// Check if message already processed
+	isProcessed, err := h.messageRepo.IsProcessed(event.MessageID)
+	if err != nil {
+		fmt.Printf("check message processed failed: %v\n", err)
+	}
+	if isProcessed {
+		fmt.Printf("message %s already processed, skip\n", event.MessageID)
+		c.JSON(http.StatusOK, dto.Success(nil))
 		return
 	}
 
