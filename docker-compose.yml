@@ -137,6 +137,23 @@ services:
     depends_on:
       - inventory-service
 
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8090:8090"
+    environment:
+      - GATEWAY_PORT=8090
+      - ORDER_SERVICE_URL=http://order-service:8080
+      - PAYMENT_SERVICE_URL=http://payment-service:8081
+      - INVENTORY_SERVICE_URL=http://inventory-service:8082
+      - JWT_SECRET=your-secret-key-change-in-production
+    depends_on:
+      - order-service
+      - payment-service
+      - inventory-service
+
 volumes:
   mysql_data:
 
