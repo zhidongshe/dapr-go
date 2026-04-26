@@ -49,3 +49,42 @@ func (h *PaymentHandler) PaymentCallback(c *gin.Context) {
 
 	c.JSON(http.StatusOK, dto.Success(nil))
 }
+
+// GetPaymentByTransactionID 根据交易号查询支付记录
+func (h *PaymentHandler) GetPaymentByTransactionID(c *gin.Context) {
+	transactionID := c.Param("transaction_id")
+	if transactionID == "" {
+		c.JSON(http.StatusBadRequest, dto.Error(1001, "transaction_id is required"))
+		return
+	}
+
+	payment, err := h.service.GetPaymentByTransactionID(transactionID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.Error(5000, err.Error()))
+		return
+	}
+
+	if payment == nil {
+		c.JSON(http.StatusNotFound, dto.Error(1002, "payment not found"))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.Success(payment))
+}
+
+// GetPaymentsByOrderNo 根据订单号查询支付记录
+func (h *PaymentHandler) GetPaymentsByOrderNo(c *gin.Context) {
+	orderNo := c.Query("order_no")
+	if orderNo == "" {
+		c.JSON(http.StatusBadRequest, dto.Error(1001, "order_no is required"))
+		return
+	}
+
+	payments, err := h.service.GetPaymentsByOrderNo(orderNo)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.Error(5000, err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.Success(payments))
+}

@@ -293,6 +293,33 @@ func (s *OrderService) HandleOrderPaid(ctx context.Context, event *events.OrderP
 	return nil
 }
 
+func (s *OrderService) HandleInventoryReserveFailed(ctx context.Context, event *events.InventoryReserveFailedEvent) error {
+	fmt.Printf("handling inventory reserve failed for order %s: %s\n", event.OrderNo, event.Reason)
+
+	// Get order by order number
+	order, err := s.repo.GetOrderByNo(event.OrderNo)
+	if err != nil {
+		return fmt.Errorf("failed to get order: %w", err)
+	}
+	if order == nil {
+		return fmt.Errorf("order not found: %s", event.OrderNo)
+	}
+
+	// Only cancel if order is still pending
+	if order.Status != events.OrderStatusPending {
+		fmt.Printf("order %s is not pending (status=%d), skip cancel\n", event.OrderNo, order.Status)
+		return nil
+	}
+
+	// Cancel the order
+	if err := s.CancelOrder(ctx, order.ID, fmt.Sprintf("inventory reserve failed: %s", event.Reason)); err != nil {
+		return fmt.Errorf("failed to cancel order: %w", err)
+	}
+
+	fmt.Printf("order %s cancelled due to inventory reserve failed\n", event.OrderNo)
+	return nil
+}
+
 func (s *OrderService) publishEvent(ctx context.Context, topic string, data interface{}) error {
 	payload, err := json.Marshal(data)
 	if err != nil {

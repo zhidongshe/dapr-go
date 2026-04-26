@@ -142,6 +142,11 @@ func (h *OrderHandler) DaprSubscribe(c *gin.Context) {
             Topic:      events.TopicOrderPaid,
             Route:      "/events/order-paid",
         },
+        {
+            PubsubName: "order-pubsub",
+            Topic:      events.TopicInventoryReserveFailed,
+            Route:      "/events/inventory-reserve-failed",
+        },
     })
 }
 
@@ -168,8 +173,49 @@ func (h *OrderHandler) HandleOrderPaid(c *gin.Context) {
     c.JSON(http.StatusOK, dto.Success(nil))
 }
 
+func (h *OrderHandler) HandleInventoryReserveFailed(c *gin.Context) {
+    var message daprPubsubEvent
+    if err := c.ShouldBindJSON(&message); err != nil {
+        c.JSON(http.StatusBadRequest, dto.Error(1001, err.Error()))
+        return
+    }
+
+    event, err := decodeInventoryReserveFailedEvent(message.Data)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, dto.Error(1001, err.Error()))
+        return
+    }
+
+    fmt.Printf("received inventory-reserve-failed event: order_no=%s reason=%s\n", event.OrderNo, event.Reason)
+
+    if err := h.service.HandleInventoryReserveFailed(c.Request.Context(), event); err != nil {
+        c.JSON(http.StatusInternalServerError, dto.Error(5000, err.Error()))
+        return
+    }
+
+    c.JSON(http.StatusOK, dto.Success(nil))
+}
+
 func decodeOrderPaidEvent(data json.RawMessage) (*events.OrderPaidEvent, error) {
     var event events.OrderPaidEvent
+    if err := json.Unmarshal(data, &event); err == nil {
+        return &event, nil
+    }
+
+    var payload string
+    if err := json.Unmarshal(data, &payload); err != nil {
+        return nil, err
+    }
+
+    if err := json.Unmarshal([]byte(payload), &event); err != nil {
+        return nil, err
+    }
+
+    return &event, nil
+}
+
+func decodeInventoryReserveFailedEvent(data json.RawMessage) (*events.InventoryReserveFailedEvent, error) {
+    var event events.InventoryReserveFailedEvent
     if err := json.Unmarshal(data, &event); err == nil {
         return &event, nil
     }

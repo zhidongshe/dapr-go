@@ -29,6 +29,7 @@ func main() {
 
     r.GET("/dapr/subscribe", orderHandler.DaprSubscribe)
     r.POST("/events/order-paid", orderHandler.HandleOrderPaid)
+    r.POST("/events/inventory-reserve-failed", orderHandler.HandleInventoryReserveFailed)
 
     r.GET("/health", func(c *gin.Context) {
         c.JSON(http.StatusOK, gin.H{"status": "ok"})
