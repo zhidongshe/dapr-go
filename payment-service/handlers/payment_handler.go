@@ -72,6 +72,15 @@ func (h *PaymentHandler) GetPaymentByTransactionID(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.Success(payment))
 }
 
+func (h *PaymentHandler) GetPaymentStats(c *gin.Context) {
+	stats, err := h.service.GetPaymentStats()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.Error(5000, err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, dto.Success(stats))
+}
+
 // GetPaymentsByOrderNo 根据订单号查询支付记录
 func (h *PaymentHandler) GetPaymentsByOrderNo(c *gin.Context) {
 	orderNo := c.Query("order_no")

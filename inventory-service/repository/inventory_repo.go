@@ -166,6 +166,26 @@ func (r *InventoryRepository) GetReservationsByOrder(orderNo string) ([]models.I
 	return reservations, nil
 }
 
+func (r *InventoryRepository) ListAllInventory() ([]models.Inventory, error) {
+	rows, err := r.db.Query(
+		`SELECT product_id, product_name, available_stock, reserved_stock, version, updated_at
+		 FROM inventory ORDER BY product_id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []models.Inventory
+	for rows.Next() {
+		var inv models.Inventory
+		if err := rows.Scan(&inv.ProductID, &inv.ProductName, &inv.AvailableStock, &inv.ReservedStock, &inv.Version, &inv.UpdatedAt); err != nil {
+			return nil, err
+		}
+		list = append(list, inv)
+	}
+	return list, nil
+}
+
 // BeginTransaction starts a new transaction
 func (r *InventoryRepository) BeginTransaction() (*sql.Tx, error) {
 	return r.db.Begin()

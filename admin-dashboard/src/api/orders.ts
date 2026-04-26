@@ -4,11 +4,8 @@ import type { ApiResponse, Order, PaginatedResponse } from '@/types/api'
 export interface OrderListParams {
   page?: number
   pageSize?: number
-  orderNo?: string
+  order_no?: string
   status?: number
-  payStatus?: number
-  startTime?: string
-  endTime?: string
 }
 
 export const getOrders = (params?: OrderListParams) => {

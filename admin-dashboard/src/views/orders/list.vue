@@ -35,11 +35,11 @@
 
       <!-- 数据表格 -->
       <el-table :data="orderList" v-loading="loading" stripe>
-        <el-table-column prop="orderNo" label="订单号" width="180" />
-        <el-table-column prop="userId" label="用户ID" width="100" />
-        <el-table-column prop="totalAmount" label="订单金额" width="120">
+        <el-table-column prop="order_no" label="订单号" width="220" />
+        <el-table-column prop="user_id" label="用户ID" width="100" />
+        <el-table-column prop="total_amount" label="订单金额" width="120">
           <template #default="{ row }">
-            ¥{{ row.totalAmount.toFixed(2) }}
+            ¥{{ (row.total_amount / 100).toFixed(2) }}
           </template>
         </el-table-column>
         <el-table-column prop="status" label="订单状态" width="100">
@@ -49,16 +49,16 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="payStatus" label="支付状态" width="100">
+        <el-table-column prop="pay_status" label="支付状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.payStatus === 1 ? 'success' : 'info'" size="small">
-              {{ row.payStatus === 1 ? '已支付' : '未支付' }}
+            <el-tag :type="row.pay_status === 1 ? 'success' : 'info'" size="small">
+              {{ row.pay_status === 1 ? '已支付' : '未支付' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="创建时间" width="180">
+        <el-table-column prop="created_at" label="创建时间" width="180">
           <template #default="{ row }">
-            {{ formatDate(row.createdAt) }}
+            {{ formatDate(row.created_at) }}
           </template>
         </el-table-column>
         <el-table-column label="操作" fixed="right" width="120">
@@ -115,7 +115,7 @@ const fetchOrders = async () => {
     const response = await getOrders({
       page: page.value,
       pageSize: pageSize.value,
-      orderNo: searchForm.orderNo || undefined,
+      order_no: searchForm.orderNo || undefined,
       status: searchForm.status
     })
     orderList.value = response.data.data.list

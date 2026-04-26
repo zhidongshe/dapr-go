@@ -201,6 +201,10 @@ func (s *PaymentService) GetPaymentsByOrderNo(orderNo string) ([]*models.Payment
 	return s.repo.GetPaymentsByOrderNo(orderNo)
 }
 
+func (s *PaymentService) GetPaymentStats() (*repository.PaymentStats, error) {
+	return s.repo.GetPaymentStats()
+}
+
 func (s *PaymentService) getOrderByNo(ctx context.Context, orderNo string) (*models.OrderInfo, error) {
 	// Use HTTP call to order service
 	url := fmt.Sprintf("%s/api/v1/orders?order_no=%s", s.orderServiceURL, orderNo)

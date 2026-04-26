@@ -93,25 +93,58 @@ func (h *OrderHandler) ListOrders(c *gin.Context) {
         return
     }
 
-    userIDStr := c.Query("user_id")
-    userID, err := strconv.ParseUint(userIDStr, 10, 64)
-    if err != nil {
-        c.JSON(http.StatusBadRequest, dto.Error(1001, "invalid user_id"))
-        return
+    var userID uint64
+    if userIDStr := c.Query("user_id"); userIDStr != "" {
+        var err error
+        userID, err = strconv.ParseUint(userIDStr, 10, 64)
+        if err != nil {
+            c.JSON(http.StatusBadRequest, dto.Error(1001, "invalid user_id"))
+            return
+        }
     }
 
-    limitStr := c.DefaultQuery("limit", "10")
-    offsetStr := c.DefaultQuery("offset", "0")
-    limit, _ := strconv.Atoi(limitStr)
-    offset, _ := strconv.Atoi(offsetStr)
+    var status *int
+    if statusStr := c.Query("status"); statusStr != "" {
+        s, err := strconv.Atoi(statusStr)
+        if err == nil {
+            status = &s
+        }
+    }
 
-    orders, err := h.service.ListOrders(c.Request.Context(), userID, limit, offset)
+    page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+    pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+    if page < 1 {
+        page = 1
+    }
+    if pageSize < 1 {
+        pageSize = 10
+    }
+    limit := pageSize
+    offset := (page - 1) * pageSize
+
+    orders, total, err := h.service.ListOrders(c.Request.Context(), userID, status, limit, offset)
     if err != nil {
         c.JSON(http.StatusInternalServerError, dto.Error(5000, err.Error()))
         return
     }
 
-    c.JSON(http.StatusOK, dto.Success(orders))
+    if orders == nil {
+        orders = []models.Order{}
+    }
+
+    c.JSON(http.StatusOK, dto.Success(gin.H{
+        "list":  orders,
+        "total": total,
+    }))
+}
+
+func (h *OrderHandler) GetOrderStats(c *gin.Context) {
+    stats, err := h.service.GetOrderStats(c.Request.Context())
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, dto.Error(5000, err.Error()))
+        return
+    }
+    c.JSON(http.StatusOK, dto.Success(stats))
 }
 
 func (h *OrderHandler) CancelOrder(c *gin.Context) {

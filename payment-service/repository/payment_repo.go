@@ -154,6 +154,29 @@ func (r *PaymentRepository) UpdatePaymentStatus(transactionID string, status int
 	return err
 }
 
+type PaymentStats struct {
+	TodayCount  int64   `json:"todayCount"`
+	TodayAmount float64 `json:"todayAmount"`
+	WeekAmount  float64 `json:"weekAmount"`
+	MonthAmount float64 `json:"monthAmount"`
+}
+
+func (r *PaymentRepository) GetPaymentStats() (*PaymentStats, error) {
+	stats := &PaymentStats{}
+	err := r.db.QueryRow(
+		`SELECT
+			COUNT(CASE WHEN DATE(pay_time) = CURDATE() AND status = 1 THEN 1 END),
+			COALESCE(SUM(CASE WHEN DATE(pay_time) = CURDATE() AND status = 1 THEN amount END), 0),
+			COALESCE(SUM(CASE WHEN pay_time >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) AND status = 1 THEN amount END), 0),
+			COALESCE(SUM(CASE WHEN pay_time >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) AND status = 1 THEN amount END), 0)
+		FROM payments`,
+	).Scan(&stats.TodayCount, &stats.TodayAmount, &stats.WeekAmount, &stats.MonthAmount)
+	if err != nil {
+		return nil, err
+	}
+	return stats, nil
+}
+
 // GetDB 获取数据库连接（用于健康检查）
 func (r *PaymentRepository) GetDB() *sql.DB {
 	return r.db

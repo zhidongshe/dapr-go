@@ -23,6 +23,7 @@ func main() {
 	{
 		api.POST("/payments", paymentHandler.CreatePayment)
 		api.POST("/payments/callback", paymentHandler.PaymentCallback)
+		api.GET("/payments/stats", paymentHandler.GetPaymentStats)
 		api.GET("/payments/:transaction_id", paymentHandler.GetPaymentByTransactionID)
 		api.GET("/payments", paymentHandler.GetPaymentsByOrderNo)
 	}

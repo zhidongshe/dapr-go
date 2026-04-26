@@ -44,6 +44,10 @@ func (s *InventoryService) GetInventory(productID int64) (*models.Inventory, err
 	return s.repo.GetInventory(productID)
 }
 
+func (s *InventoryService) ListAllInventory() ([]models.Inventory, error) {
+	return s.repo.ListAllInventory()
+}
+
 // ReserveStock reserves stock for an order
 func (s *InventoryService) ReserveStock(ctx context.Context, req *events.InventoryReserveEvent) error {
 	tx, err := s.repo.BeginTransaction()

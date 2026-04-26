@@ -44,11 +44,15 @@ func NewOrderService() *OrderService {
 		}
 	}
 
-	return &OrderService{
+	svc := &OrderService{
 		repo:           repo,
 		daprClient:     client,
 		timeoutMinutes: timeoutMinutes,
 	}
+
+	go svc.recoverPendingOrders()
+
+	return svc
 }
 
 func (s *OrderService) CreateOrder(ctx context.Context, req *models.CreateOrderRequest) (*models.Order, error) {
@@ -127,6 +131,56 @@ func (s *OrderService) CreateOrder(ctx context.Context, req *models.CreateOrderR
 	return order, nil
 }
 
+func (s *OrderService) recoverPendingOrders() {
+	orders, err := s.repo.ListPendingOrders()
+	if err != nil {
+		fmt.Printf("recover: failed to list pending orders: %v\n", err)
+		return
+	}
+	if len(orders) == 0 {
+		return
+	}
+
+	fmt.Printf("recover: found %d pending orders\n", len(orders))
+	timeout := time.Duration(s.timeoutMinutes) * time.Minute
+	ctx := context.Background()
+
+	for i := range orders {
+		order := orders[i]
+		elapsed := time.Since(order.CreatedAt)
+		if elapsed >= timeout {
+			fmt.Printf("recover: order %s expired (created %v ago), cancelling\n", order.OrderNo, elapsed.Round(time.Second))
+			if err := s.updateOrderStatusWithEvent(ctx, &order, events.OrderStatusCancelled); err != nil {
+				fmt.Printf("recover: cancel order %s failed: %v\n", order.OrderNo, err)
+				continue
+			}
+			cancelEvent := events.OrderCancelledEvent{
+				OrderID:    int64(order.ID),
+				OrderNo:    order.OrderNo,
+				UserID:     int64(order.UserID),
+				CancelTime: time.Now(),
+				Reason:     "auto cancelled due to timeout (recovered on startup)",
+			}
+			s.publishEvent(ctx, events.TopicOrderCancelled, cancelEvent)
+
+			releaseEvent := events.InventoryReleaseEvent{
+				MessageID:  generateUUID(),
+				OrderID:    int64(order.ID),
+				OrderNo:    order.OrderNo,
+				Reason:     "auto cancelled due to timeout (recovered on startup)",
+				ReleasedAt: time.Now(),
+			}
+			s.publishEvent(ctx, events.TopicInventoryRelease, releaseEvent)
+
+			fmt.Printf("recover: order %s cancelled and inventory released\n", order.OrderNo)
+		} else {
+			remaining := timeout - elapsed
+			fmt.Printf("recover: order %s has %v remaining, rescheduling\n", order.OrderNo, remaining.Round(time.Second))
+			go s.scheduleTimeoutCheck(&order)
+		}
+	}
+}
+
 // scheduleTimeoutCheck runs in background and cancels order after timeout
 func (s *OrderService) scheduleTimeoutCheck(order *models.Order) {
 	timeoutDuration := time.Duration(s.timeoutMinutes) * time.Minute
@@ -173,7 +227,19 @@ func (s *OrderService) scheduleTimeoutCheck(order *models.Order) {
 		fmt.Printf("timeout check: failed to publish cancelled event: %v\n", err)
 	}
 
-	fmt.Printf("timeout check: order %s auto cancelled successfully\n", currentOrder.OrderNo)
+	// Publish inventory release event
+	releaseEvent := events.InventoryReleaseEvent{
+		MessageID:  generateUUID(),
+		OrderID:    int64(currentOrder.ID),
+		OrderNo:    currentOrder.OrderNo,
+		Reason:     "auto cancelled due to timeout",
+		ReleasedAt: time.Now(),
+	}
+	if err := s.publishEvent(ctx, events.TopicInventoryRelease, releaseEvent); err != nil {
+		fmt.Printf("timeout check: failed to publish inventory release event: %v\n", err)
+	}
+
+	fmt.Printf("timeout check: order %s auto cancelled and inventory released\n", currentOrder.OrderNo)
 }
 
 // updateOrderStatusWithEvent updates order status and publishes status changed event
@@ -211,8 +277,12 @@ func (s *OrderService) GetOrderByNo(ctx context.Context, orderNo string) (*model
 	return s.repo.GetOrderByNo(orderNo)
 }
 
-func (s *OrderService) ListOrders(ctx context.Context, userID uint64, limit, offset int) ([]models.Order, error) {
-	return s.repo.ListOrders(userID, limit, offset)
+func (s *OrderService) ListOrders(ctx context.Context, userID uint64, status *int, limit, offset int) ([]models.Order, int64, error) {
+	return s.repo.ListOrders(userID, status, limit, offset)
+}
+
+func (s *OrderService) GetOrderStats(ctx context.Context) ([]repository.OrderStatusCount, error) {
+	return s.repo.GetOrderStats()
 }
 
 func (s *OrderService) CancelOrder(ctx context.Context, orderID uint64, reason string) error {

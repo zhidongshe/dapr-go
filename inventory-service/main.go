@@ -22,6 +22,7 @@ func main() {
 	// API routes
 	api := r.Group("/api/v1")
 	{
+		api.GET("/inventory", handler.ListAllInventory)
 		api.GET("/inventory/:product_id", handler.GetInventory)
 	}
 

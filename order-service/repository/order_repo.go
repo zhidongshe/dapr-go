@@ -153,13 +153,32 @@ func (r *OrderRepository) UpdatePayStatus(orderID uint64, payStatus int, payTime
     return err
 }
 
-func (r *OrderRepository) ListOrders(userID uint64, limit, offset int) ([]models.Order, error) {
-    query := `SELECT id, order_no, user_id, total_amount, status, pay_status, created_at
-              FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`
+func (r *OrderRepository) ListOrders(userID uint64, status *int, limit, offset int) ([]models.Order, int64, error) {
+    where := "1=1"
+    args := []interface{}{}
+    if userID > 0 {
+        where += " AND user_id = ?"
+        args = append(args, userID)
+    }
+    if status != nil {
+        where += " AND status = ?"
+        args = append(args, *status)
+    }
 
-    rows, err := r.db.Query(query, userID, limit, offset)
+    var total int64
+    countArgs := make([]interface{}, len(args))
+    copy(countArgs, args)
+    err := r.db.QueryRow("SELECT COUNT(*) FROM orders WHERE "+where, countArgs...).Scan(&total)
     if err != nil {
-        return nil, err
+        return nil, 0, err
+    }
+
+    queryArgs := append(args, limit, offset)
+    rows, err := r.db.Query(
+        "SELECT id, order_no, user_id, total_amount, status, pay_status, created_at FROM orders WHERE "+where+" ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        queryArgs...)
+    if err != nil {
+        return nil, 0, err
     }
     defer rows.Close()
 
@@ -169,10 +188,56 @@ func (r *OrderRepository) ListOrders(userID uint64, limit, offset int) ([]models
         err := rows.Scan(&order.ID, &order.OrderNo, &order.UserID, &order.TotalAmount,
             &order.Status, &order.PayStatus, &order.CreatedAt)
         if err != nil {
-            return nil, err
+            return nil, 0, err
         }
         orders = append(orders, order)
     }
 
+    return orders, total, nil
+}
+
+type OrderStatusCount struct {
+    Status int     `json:"status"`
+    Count  int64   `json:"count"`
+    Amount float64 `json:"amount"`
+}
+
+func (r *OrderRepository) ListPendingOrders() ([]models.Order, error) {
+    rows, err := r.db.Query(
+        `SELECT id, order_no, user_id, total_amount, status, pay_status, created_at
+         FROM orders WHERE status = 0 ORDER BY created_at`)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    var orders []models.Order
+    for rows.Next() {
+        var o models.Order
+        if err := rows.Scan(&o.ID, &o.OrderNo, &o.UserID, &o.TotalAmount, &o.Status, &o.PayStatus, &o.CreatedAt); err != nil {
+            return nil, err
+        }
+        orders = append(orders, o)
+    }
     return orders, nil
+}
+
+func (r *OrderRepository) GetOrderStats() ([]OrderStatusCount, error) {
+    rows, err := r.db.Query(
+        `SELECT status, COUNT(*) as cnt, COALESCE(SUM(total_amount), 0) as amount
+         FROM orders GROUP BY status`)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    var stats []OrderStatusCount
+    for rows.Next() {
+        var s OrderStatusCount
+        if err := rows.Scan(&s.Status, &s.Count, &s.Amount); err != nil {
+            return nil, err
+        }
+        stats = append(stats, s)
+    }
+    return stats, nil
 }

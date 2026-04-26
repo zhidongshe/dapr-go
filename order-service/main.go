@@ -22,6 +22,7 @@ func main() {
     api := r.Group("/api/v1")
     {
         api.POST("/orders", orderHandler.CreateOrder)
+        api.GET("/orders/stats", orderHandler.GetOrderStats)
         api.GET("/orders/:id", orderHandler.GetOrder)
         api.GET("/orders", orderHandler.ListOrders)
         api.POST("/orders/:id/cancel", orderHandler.CancelOrder)

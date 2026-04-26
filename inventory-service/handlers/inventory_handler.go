@@ -73,6 +73,15 @@ func (h *InventoryHandler) GetInventory(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.Success(inv))
 }
 
+func (h *InventoryHandler) ListAllInventory(c *gin.Context) {
+	list, err := h.service.ListAllInventory()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.Error(5000, err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, dto.Success(list))
+}
+
 // DaprSubscribe returns Dapr subscription configuration
 func (h *InventoryHandler) DaprSubscribe(c *gin.Context) {
 	subscriptions := []daprSubscription{

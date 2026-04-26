@@ -7,27 +7,27 @@
       <div class="section">
         <h3 class="section-title">基本信息</h3>
         <el-descriptions :column="3" border>
-          <el-descriptions-item label="订单号">{{ order?.orderNo }}</el-descriptions-item>
-          <el-descriptions-item label="用户ID">{{ order?.userId }}</el-descriptions-item>
+          <el-descriptions-item label="订单号">{{ order?.order_no }}</el-descriptions-item>
+          <el-descriptions-item label="用户ID">{{ order?.user_id }}</el-descriptions-item>
           <el-descriptions-item label="订单状态">
             <el-tag :type="getStatusType(order?.status)">
               {{ getStatusText(order?.status) }}
             </el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="支付状态">
-            <el-tag :type="order?.payStatus === 1 ? 'success' : 'info'">
-              {{ order?.payStatus === 1 ? '已支付' : '未支付' }}
+            <el-tag :type="order?.pay_status === 1 ? 'success' : 'info'">
+              {{ order?.pay_status === 1 ? '已支付' : '未支付' }}
             </el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="支付方式">{{ order?.payMethod || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="支付方式">{{ order?.pay_method || '-' }}</el-descriptions-item>
           <el-descriptions-item label="支付时间">
-            {{ order?.payTime ? formatDate(order.payTime) : '-' }}
+            {{ order?.pay_time ? formatDate(order.pay_time) : '-' }}
           </el-descriptions-item>
           <el-descriptions-item label="订单金额" :span="2">
-            <span class="amount">¥{{ order?.totalAmount.toFixed(2) }}</span>
+            <span class="amount">¥{{ order ? (order.total_amount / 100).toFixed(2) : '0.00' }}</span>
           </el-descriptions-item>
           <el-descriptions-item label="创建时间">
-            {{ order?.createdAt ? formatDate(order.createdAt) : '-' }}
+            {{ order?.created_at ? formatDate(order.created_at) : '-' }}
           </el-descriptions-item>
           <el-descriptions-item label="备注" :span="3">{{ order?.remark || '-' }}</el-descriptions-item>
         </el-descriptions>
@@ -37,17 +37,17 @@
       <div class="section">
         <h3 class="section-title">商品明细</h3>
         <el-table :data="order?.items" stripe>
-          <el-table-column prop="productId" label="商品ID" width="100" />
-          <el-table-column prop="productName" label="商品名称" />
-          <el-table-column prop="unitPrice" label="单价" width="120">
+          <el-table-column prop="product_id" label="商品ID" width="100" />
+          <el-table-column prop="product_name" label="商品名称" />
+          <el-table-column prop="unit_price" label="单价" width="120">
             <template #default="{ row }">
-              ¥{{ row.unitPrice.toFixed(2) }}
+              ¥{{ (row.unit_price / 100).toFixed(2) }}
             </template>
           </el-table-column>
           <el-table-column prop="quantity" label="数量" width="100" />
-          <el-table-column prop="totalPrice" label="小计" width="120">
+          <el-table-column prop="total_price" label="小计" width="120">
             <template #default="{ row }">
-              ¥{{ row.totalPrice.toFixed(2) }}
+              ¥{{ (row.total_price / 100).toFixed(2) }}
             </template>
           </el-table-column>
         </el-table>
