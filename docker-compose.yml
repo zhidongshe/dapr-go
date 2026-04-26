@@ -141,6 +141,7 @@ services:
     build:
       context: ./api-gateway
       dockerfile: Dockerfile
+    container_name: oms-api-gateway
     ports:
       - "8090:8090"
     environment:
@@ -149,10 +150,24 @@ services:
       - PAYMENT_SERVICE_URL=http://payment-service:8081
       - INVENTORY_SERVICE_URL=http://inventory-service:8082
       - JWT_SECRET=your-secret-key-change-in-production
+    networks:
+      - oms-network
     depends_on:
       - order-service
       - payment-service
       - inventory-service
+
+  web:
+    build:
+      context: ./admin-dashboard
+      dockerfile: Dockerfile
+    container_name: oms-web
+    ports:
+      - "80:80"
+    networks:
+      - oms-network
+    depends_on:
+      - api-gateway
 
 volumes:
   mysql_data:
