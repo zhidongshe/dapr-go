@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: oms
+
+resources:
+  - 00-namespace.yaml
+  - base/01-mysql.yaml
+  - base/02-redis.yaml
+  - dapr/pubsub.yaml
+  - dapr/statestore.yaml
+  - base/03-order-service.yaml
+  - base/04-payment-service.yaml
+  - base/05-inventory-service.yaml
+  - base/06-api-gateway.yaml
+  - base/07-web.yaml
+  - ingress/ingress.yaml
