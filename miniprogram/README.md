@@ -11,5 +11,5 @@
 
 ## API base URL setup
 - `utils/request.js` reads the API base URL from local storage key `apiBaseUrl` before each request.
-- If nothing is configured yet, requests fall back to the placeholder `http://example.com/api`.
-- Replace that placeholder, or write the deployed gateway base URL into storage, before testing real API calls.
+- If nothing is configured yet, requests now throw an explicit configuration error instead of falling back to a placeholder host.
+- Write the deployed gateway base URL into storage before testing real API calls.

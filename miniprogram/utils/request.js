@@ -1,5 +1,4 @@
 const {
-  DEFAULT_API_BASE_URL,
   API_BASE_URL_STORAGE_KEY
 } = require('./constants')
 
@@ -11,10 +10,12 @@ function getApiBaseUrl() {
       return configuredBaseUrl.trim().replace(/\/$/, '')
     }
   } catch (error) {
-    // Ignore storage access errors and fall back to the default placeholder.
+    // Ignore storage access errors and validate configuration below.
   }
 
-  return DEFAULT_API_BASE_URL.replace(/\/$/, '')
+  throw new Error(
+    `Missing API base URL configuration. Set wx storage key \"${API_BASE_URL_STORAGE_KEY}\" to the deployed gateway host before sending requests.`
+  )
 }
 
 function request({ url, method = 'GET', data, header = {} }) {
