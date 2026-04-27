@@ -2,8 +2,10 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/dapr-oms/product-service/models"
@@ -31,13 +33,28 @@ func NewProductService() *ProductService {
 }
 
 func (s *ProductService) CreateProduct(ctx context.Context, req *models.CreateProductRequest) (*models.Product, error) {
+	// Validate product name
+	name := strings.TrimSpace(req.ProductName)
+	if name == "" {
+		return nil, errors.New("product_name is required")
+	}
+
+	// Validate price
+	if req.OriginalPrice <= 0 {
+		return nil, errors.New("original_price must be greater than 0")
+	}
+
+	// Validate and set status
 	status := models.ProductStatusOnSale
 	if req.Status != nil {
 		status = *req.Status
 	}
+	if status != models.ProductStatusOnSale && status != models.ProductStatusOffSale {
+		return nil, errors.New("invalid status")
+	}
 
 	product := &models.Product{
-		ProductName:   req.ProductName,
+		ProductName:   name,
 		OriginalPrice: req.OriginalPrice,
 		Status:        status,
 		CreatedAt:     time.Now(),
@@ -68,6 +85,11 @@ func (s *ProductService) UpdatePrice(ctx context.Context, productID int64, req *
 }
 
 func (s *ProductService) UpdateStatus(ctx context.Context, productID int64, req *models.UpdateStatusRequest) error {
+	// Validate status
+	if req.Status != models.ProductStatusOnSale && req.Status != models.ProductStatusOffSale {
+		return errors.New("invalid status")
+	}
+
 	product, err := s.repo.GetProductByID(productID)
 	if err != nil {
 		return err

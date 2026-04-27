@@ -90,8 +90,10 @@ func (h *ProductHandler) ListProducts(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, dto.Success(gin.H{
-		"list":  products,
-		"total": total,
+		"list":     products,
+		"total":    total,
+		"page":     page,
+		"pageSize": pageSize,
 	}))
 }
 
