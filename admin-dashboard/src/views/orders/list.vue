@@ -8,7 +8,7 @@
         </el-form-item>
 
         <el-form-item label="订单状态">
-          <el-select v-model="searchForm.status" placeholder="全部状态" clearable>
+          <el-select v-model="searchForm.status" placeholder="全部状态" clearable style="width: 120px">
             <el-option label="待支付" :value="0" />
             <el-option label="已支付" :value="1" />
             <el-option label="处理中" :value="2" />

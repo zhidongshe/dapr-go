@@ -120,7 +120,7 @@ const stats = ref<DashboardStats | null>(null)
 const loading = ref(false)
 
 const formatMoney = (amount: number) => {
-  return amount.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return (amount / 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 const fetchStats = async () => {
