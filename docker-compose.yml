@@ -1,3 +1,11 @@
+x-image-config: &image-config
+  order-service: &order-image ${DOCKER_REGISTRY:-}dapr-go-order-service:${IMAGE_TAG:-latest}
+  payment-service: &payment-image ${DOCKER_REGISTRY:-}dapr-go-payment-service:${IMAGE_TAG:-latest}
+  inventory-service: &inventory-image ${DOCKER_REGISTRY:-}dapr-go-inventory-service:${IMAGE_TAG:-latest}
+  product-service: &product-image ${DOCKER_REGISTRY:-}dapr-go-product-service:${IMAGE_TAG:-latest}
+  api-gateway: &gateway-image ${DOCKER_REGISTRY:-}dapr-go-api-gateway:${IMAGE_TAG:-latest}
+  web: &web-image ${DOCKER_REGISTRY:-}dapr-go-web:${IMAGE_TAG:-latest}
+
 services:
   mysql:
     image: mysql:8.0
@@ -35,11 +43,13 @@ services:
     build:
       context: .
       dockerfile: order-service/Dockerfile
+    image: *order-image
     container_name: oms-order-service
     environment:
       APP_PORT: "8080"
       MYSQL_DSN: "root:rootpassword@tcp(mysql:3306)/oms_db?charset=utf8mb4&parseTime=true"
       ORDER_TIMEOUT_MINUTES: "10"
+      PRODUCT_SERVICE_URL: "http://product-service:8083"
     ports:
       - "8080:8080"
       - "3500:3500"
@@ -71,6 +81,7 @@ services:
     build:
       context: .
       dockerfile: payment-service/Dockerfile
+    image: *payment-image
     container_name: oms-payment-service
     environment:
       APP_PORT: "8081"
@@ -106,6 +117,7 @@ services:
     build:
       context: .
       dockerfile: inventory-service/Dockerfile
+    image: *inventory-image
     container_name: oms-inventory-service
     environment:
       APP_PORT: "8082"
@@ -137,10 +149,47 @@ services:
     depends_on:
       - inventory-service
 
+  product-service:
+    build:
+      context: .
+      dockerfile: product-service/Dockerfile
+    image: *product-image
+    container_name: oms-product-service
+    environment:
+      APP_PORT: "8083"
+      MYSQL_DSN: "root:rootpassword@tcp(mysql:3306)/oms_db?charset=utf8mb4&parseTime=true"
+    ports:
+      - "8083:8083"
+      - "3503:3503"
+    networks:
+      - oms-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  product-service-dapr:
+    image: daprio/daprd:1.12.0
+    container_name: oms-product-service-dapr
+    command: [
+      "./daprd",
+      "--app-id", "product-service",
+      "--app-port", "8083",
+      "--dapr-http-port", "3503",
+      "--components-path", "/components"
+    ]
+    volumes:
+      - ./components:/components
+    network_mode: "service:product-service"
+    depends_on:
+      - product-service
+
   api-gateway:
     build:
       context: ./api-gateway
       dockerfile: Dockerfile
+    image: *gateway-image
     container_name: oms-api-gateway
     ports:
       - "8090:8090"
@@ -149,6 +198,7 @@ services:
       - ORDER_SERVICE_URL=http://order-service:8080
       - PAYMENT_SERVICE_URL=http://payment-service:8081
       - INVENTORY_SERVICE_URL=http://inventory-service:8082
+      - PRODUCT_SERVICE_URL=http://product-service:8083
       - JWT_SECRET=your-secret-key-change-in-production
     networks:
       - oms-network
@@ -156,11 +206,13 @@ services:
       - order-service
       - payment-service
       - inventory-service
+      - product-service
 
   web:
     build:
       context: ./admin-dashboard
       dockerfile: Dockerfile
+    image: *web-image
     container_name: oms-web
     ports:
       - "80:80"

@@ -8,6 +8,7 @@ data:
   ORDER_SERVICE_URL: "http://order-service:8080"
   PAYMENT_SERVICE_URL: "http://payment-service:8081"
   INVENTORY_SERVICE_URL: "http://inventory-service:8082"
+  PRODUCT_SERVICE_URL: "http://product-service:8083"
   JWT_SECRET: "your-secret-key-change-in-production"
 ---
 apiVersion: apps/v1
@@ -31,7 +32,7 @@ spec:
     spec:
       containers:
         - name: api-gateway
-          image: dapr-go-api-gateway:latest
+          image: dapr-go-api-gateway:20260427-213342
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8090

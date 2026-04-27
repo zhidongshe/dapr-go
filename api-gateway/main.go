@@ -31,6 +31,7 @@ func main() {
 		handlers.RegisterDashboardRoutes(api)
 		handlers.RegisterOrderRoutes(api)
 		handlers.RegisterInventoryRoutes(api)
+		handlers.RegisterProductRoutes(api)
 	}
 
 	// 健康检查

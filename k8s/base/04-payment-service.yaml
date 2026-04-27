@@ -35,7 +35,7 @@ spec:
     spec:
       containers:
         - name: payment-service
-          image: dapr-go-payment-service:latest
+          image: dapr-go-payment-service:20260427-211232
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8081

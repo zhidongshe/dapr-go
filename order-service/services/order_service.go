@@ -3,7 +3,9 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"strconv"
 	"time"
@@ -15,9 +17,11 @@ import (
 )
 
 type OrderService struct {
-	repo           *repository.OrderRepository
-	daprClient     dapr.Client
-	timeoutMinutes int
+	repo              *repository.OrderRepository
+	daprClient        dapr.Client
+	timeoutMinutes    int
+	productServiceURL string
+	httpClient        *http.Client
 }
 
 func NewOrderService() *OrderService {
@@ -44,10 +48,20 @@ func NewOrderService() *OrderService {
 		}
 	}
 
+	// 读取商品服务URL
+	productServiceURL := os.Getenv("PRODUCT_SERVICE_URL")
+	if productServiceURL == "" {
+		productServiceURL = "http://product-service:8083"
+	}
+
 	svc := &OrderService{
-		repo:           repo,
-		daprClient:     client,
-		timeoutMinutes: timeoutMinutes,
+		repo:              repo,
+		daprClient:        client,
+		timeoutMinutes:    timeoutMinutes,
+		productServiceURL: productServiceURL,
+		httpClient: &http.Client{
+			Timeout: 5 * time.Second,
+		},
 	}
 
 	go svc.recoverPendingOrders()
@@ -56,24 +70,38 @@ func NewOrderService() *OrderService {
 }
 
 func (s *OrderService) CreateOrder(ctx context.Context, req *models.CreateOrderRequest) (*models.Order, error) {
-	var totalAmount float64
+	var totalAmount int64 // Use int64 for cents to avoid floating point issues
 	items := make([]models.OrderItem, len(req.Items))
+
 	for i, itemReq := range req.Items {
+		// Fetch product from product service
+		product, err := s.getProduct(ctx, int64(itemReq.ProductID))
+		if err != nil {
+			return nil, fmt.Errorf("get product failed: %w", err)
+		}
+		if product == nil {
+			return nil, errors.New("product not found")
+		}
+		if product.Status != models.ProductStatusOnSale {
+			return nil, errors.New("product is off sale")
+		}
+
+		// Build order item using product service data (prices stored in cents)
 		items[i] = models.OrderItem{
-			ProductID:   itemReq.ProductID,
-			ProductName: itemReq.ProductName,
-			UnitPrice:   itemReq.UnitPrice,
+			ProductID:   uint64(product.ProductID),
+			ProductName: product.ProductName,
+			UnitPrice:   product.OriginalPrice, // Keep as cents
 			Quantity:    itemReq.Quantity,
-			TotalPrice:  float64(itemReq.Quantity) * itemReq.UnitPrice,
+			TotalPrice:  int64(itemReq.Quantity) * product.OriginalPrice, // Keep as cents
 			CreatedAt:   time.Now(),
 		}
-		totalAmount += items[i].TotalPrice
+		totalAmount += int64(itemReq.Quantity) * product.OriginalPrice
 	}
 
 	order := &models.Order{
 		OrderNo:     models.GenerateOrderNo(),
 		UserID:      req.UserID,
-		TotalAmount: totalAmount,
+		TotalAmount: totalAmount, // Keep as cents
 		Status:      events.OrderStatusPending,
 		PayStatus:   events.PayStatusUnpaid,
 		Remark:      req.Remark,
@@ -91,7 +119,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, req *models.CreateOrderR
 		OrderID:     int64(order.ID),
 		OrderNo:     order.OrderNo,
 		UserID:      int64(order.UserID),
-		TotalAmount: order.TotalAmount,
+		TotalAmount: float64(order.TotalAmount),
 		Status:      order.Status,
 		CreatedAt:   order.CreatedAt,
 	}
@@ -414,4 +442,44 @@ func convertToInventoryItems(items []models.OrderItem) []events.InventoryItem {
 func generateUUID() string {
 	// Simple UUID v4 generation - in production use proper UUID library
 	return fmt.Sprintf("%d-%d", time.Now().UnixNano(), time.Now().Unix())
+}
+
+// getProduct fetches product information from product service
+func (s *OrderService) getProduct(ctx context.Context, productID int64) (*models.ProductSnapshot, error) {
+	url := fmt.Sprintf("%s/api/v1/products/%d", s.productServiceURL, productID)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create request failed: %w", err)
+	}
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("http request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, nil
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("product service returned status: %d", resp.StatusCode)
+	}
+
+	var result struct {
+		Code    int                     `json:"code"`
+		Message string                  `json:"message"`
+		Data    models.ProductSnapshot  `json:"data"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("decode response failed: %w", err)
+	}
+
+	if result.Code != 0 {
+		return nil, fmt.Errorf("product service error: %s", result.Message)
+	}
+
+	return &result.Data, nil
 }

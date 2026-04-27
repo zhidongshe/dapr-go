@@ -50,7 +50,7 @@ spec:
     spec:
       containers:
         - name: web
-          image: dapr-go-web:latest
+          image: dapr-go-web:20260427-211232
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80

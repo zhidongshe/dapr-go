@@ -5,11 +5,28 @@ import (
     "fmt"
 )
 
+// Product status constants (mirrored from product-service)
+const (
+    ProductStatusOffSale = 0
+    ProductStatusOnSale  = 1
+)
+
+// ProductSnapshot represents product data fetched from product service
+type ProductSnapshot struct {
+    ProductID     int64     `json:"product_id"`
+    ProductName   string    `json:"product_name"`
+    OriginalPrice int64     `json:"original_price"` // Price in cents
+    Status        int       `json:"status"`
+    CreatedAt     time.Time `json:"created_at"`
+    UpdatedAt     time.Time `json:"updated_at"`
+}
+
+// Order 订单模型 - 金额单位为分
 type Order struct {
     ID           uint64      `json:"id" db:"id"`
     OrderNo      string      `json:"order_no" db:"order_no"`
     UserID       uint64      `json:"user_id" db:"user_id"`
-    TotalAmount  float64     `json:"total_amount" db:"total_amount"`
+    TotalAmount  int64       `json:"total_amount" db:"total_amount"` // 单位：分
     Status       int         `json:"status" db:"status"`
     PayStatus    int         `json:"pay_status" db:"pay_status"`
     PayTime      *time.Time  `json:"pay_time,omitempty" db:"pay_time"`
@@ -20,14 +37,15 @@ type Order struct {
     Items        []OrderItem `json:"items,omitempty"`
 }
 
+// OrderItem 订单商品项 - 金额单位为分
 type OrderItem struct {
-    ID          uint64  `json:"id" db:"id"`
-    OrderID     uint64  `json:"order_id" db:"order_id"`
-    ProductID   uint64  `json:"product_id" db:"product_id"`
-    ProductName string  `json:"product_name" db:"product_name"`
-    UnitPrice   float64 `json:"unit_price" db:"unit_price"`
-    Quantity    int     `json:"quantity" db:"quantity"`
-    TotalPrice  float64 `json:"total_price" db:"total_price"`
+    ID          uint64    `json:"id" db:"id"`
+    OrderID     uint64    `json:"order_id" db:"order_id"`
+    ProductID   uint64    `json:"product_id" db:"product_id"`
+    ProductName string    `json:"product_name" db:"product_name"`
+    UnitPrice   int64     `json:"unit_price" db:"unit_price"`   // 单位：分
+    Quantity    int       `json:"quantity" db:"quantity"`
+    TotalPrice  int64     `json:"total_price" db:"total_price"` // 单位：分
     CreatedAt   time.Time `json:"created_at" db:"created_at"`
 }
 
@@ -38,16 +56,14 @@ type CreateOrderRequest struct {
 }
 
 type OrderItemRequest struct {
-    ProductID   uint64  `json:"product_id" binding:"required"`
-    ProductName string  `json:"product_name" binding:"required"`
-    UnitPrice   float64 `json:"unit_price" binding:"required,gt=0"`
-    Quantity    int     `json:"quantity" binding:"required,gt=0"`
+    ProductID uint64 `json:"product_id" binding:"required"`
+    Quantity  int    `json:"quantity" binding:"required,gt=0"`
 }
 
 type OrderResponse struct {
     OrderID     uint64    `json:"order_id"`
     OrderNo     string    `json:"order_no"`
-    TotalAmount float64   `json:"total_amount"`
+    TotalAmount int64     `json:"total_amount"` // 单位：分
     Status      int       `json:"status"`
     CreatedAt   time.Time `json:"created_at"`
 }

@@ -7,6 +7,7 @@ data:
   APP_PORT: "8080"
   MYSQL_DSN: "root:rootpassword@tcp(mysql:3306)/oms_db?charset=utf8mb4&parseTime=true"
   ORDER_TIMEOUT_MINUTES: "10"
+  PRODUCT_SERVICE_URL: "http://product-service:8083"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -35,7 +36,7 @@ spec:
     spec:
       containers:
         - name: order-service
-          image: dapr-go-order-service:latest
+          image: dapr-go-order-service:20260427-214715
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
