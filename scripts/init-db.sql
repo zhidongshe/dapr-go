@@ -71,3 +71,27 @@ CREATE TABLE IF NOT EXISTS processed_messages (
     processed_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_processed_at (processed_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='已处理消息表';
+
+-- Products table
+CREATE TABLE IF NOT EXISTS products (
+    product_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    product_name VARCHAR(255) NOT NULL,
+    original_price BIGINT NOT NULL,
+    status TINYINT NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_status (status),
+    INDEX idx_product_name (product_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品主数据表';
+
+INSERT INTO products (product_id, product_name, original_price, status) VALUES
+(1, 'iPhone 16', 899900, 1),
+(2, 'AirPods Pro', 199900, 1),
+(3, 'MacBook Pro', 1299900, 1),
+(4, 'iPad Pro', 679900, 1),
+(5, 'Apple Watch', 299900, 1),
+(999, 'Limited Item', 10000, 1)
+ON DUPLICATE KEY UPDATE
+product_name = VALUES(product_name),
+original_price = VALUES(original_price),
+status = VALUES(status);
