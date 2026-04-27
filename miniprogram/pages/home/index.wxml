@@ -1,0 +1,31 @@
+<view class="container">
+  <view wx:if="{{loading}}" class="state-card card">
+    <text>商品加载中...</text>
+  </view>
+
+  <view wx:elif="{{error}}" class="state-card card">
+    <text class="state-title">加载失败</text>
+    <text class="muted">{{error}}</text>
+    <button class="primary-button retry-button" bindtap="loadProducts">重试</button>
+  </view>
+
+  <view wx:elif="{{!products.length}}" class="state-card card">
+    <text class="state-title">暂无商品</text>
+    <text class="muted">请稍后再来查看。</text>
+  </view>
+
+  <block wx:else>
+    <view class="page-title">商品列表</view>
+    <view class="product-list">
+      <view class="product-card card" wx:for="{{products}}" wx:key="product_id">
+        <view class="product-info">
+          <text class="product-name">{{item.product_name}}</text>
+          <text class="price">¥{{item.display_price}}</text>
+        </view>
+        <button class="primary-button buy-button" bindtap="handleBuyNow" data-product="{{item}}">
+          立即购买
+        </button>
+      </view>
+    </view>
+  </block>
+</view>

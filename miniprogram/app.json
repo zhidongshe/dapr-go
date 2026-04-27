@@ -1,5 +1,7 @@
 {
-  "pages": [],
+  "pages": [
+    "pages/home/index"
+  ],
   "window": {
     "navigationBarTitleText": "商城",
     "navigationBarBackgroundColor": "#ffffff",
