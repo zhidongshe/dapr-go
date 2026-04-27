@@ -40,6 +40,7 @@ services:
       APP_PORT: "8080"
       MYSQL_DSN: "root:rootpassword@tcp(mysql:3306)/oms_db?charset=utf8mb4&parseTime=true"
       ORDER_TIMEOUT_MINUTES: "10"
+      PRODUCT_SERVICE_URL: "http://product-service:8083"
     ports:
       - "8080:8080"
       - "3500:3500"
@@ -137,6 +138,41 @@ services:
     depends_on:
       - inventory-service
 
+  product-service:
+    build:
+      context: .
+      dockerfile: product-service/Dockerfile
+    container_name: oms-product-service
+    environment:
+      APP_PORT: "8083"
+      MYSQL_DSN: "root:rootpassword@tcp(mysql:3306)/oms_db?charset=utf8mb4&parseTime=true"
+    ports:
+      - "8083:8083"
+      - "3503:3503"
+    networks:
+      - oms-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  product-service-dapr:
+    image: daprio/daprd:1.12.0
+    container_name: oms-product-service-dapr
+    command: [
+      "./daprd",
+      "--app-id", "product-service",
+      "--app-port", "8083",
+      "--dapr-http-port", "3503",
+      "--components-path", "/components"
+    ]
+    volumes:
+      - ./components:/components
+    network_mode: "service:product-service"
+    depends_on:
+      - product-service
+
   api-gateway:
     build:
       context: ./api-gateway
@@ -149,6 +185,7 @@ services:
       - ORDER_SERVICE_URL=http://order-service:8080
       - PAYMENT_SERVICE_URL=http://payment-service:8081
       - INVENTORY_SERVICE_URL=http://inventory-service:8082
+      - PRODUCT_SERVICE_URL=http://product-service:8083
       - JWT_SECRET=your-secret-key-change-in-production
     networks:
       - oms-network
@@ -156,6 +193,7 @@ services:
       - order-service
       - payment-service
       - inventory-service
+      - product-service
 
   web:
     build:

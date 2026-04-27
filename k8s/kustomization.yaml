@@ -12,6 +12,7 @@ resources:
   - base/03-order-service.yaml
   - base/04-payment-service.yaml
   - base/05-inventory-service.yaml
+  - base/05a-product-service.yaml
   - base/06-api-gateway.yaml
   - base/07-web.yaml
   - ingress/ingress.yaml
