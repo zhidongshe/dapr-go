@@ -1,0 +1,9 @@
+{
+  "desc": "OMS WeChat mini-program sitemap",
+  "rules": [
+    {
+      "action": "allow",
+      "page": "*"
+    }
+  ]
+}
