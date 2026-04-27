@@ -14,30 +14,51 @@ const (
 	OrderServiceURL     = "http://localhost:8080"
 	InventoryServiceURL = "http://localhost:8082"
 	PaymentServiceURL   = "http://localhost:8081"
+	ProductServiceURL   = "http://localhost:8083"
 )
 
+// CreateOrderRequest - updated to only send product_id and quantity
+// Product name and price are fetched from product service
 type CreateOrderRequest struct {
 	UserID int64 `json:"user_id"`
 	Items  []struct {
-		ProductID   int64  `json:"product_id"`
-		ProductName string `json:"product_name"`
-		Quantity    int    `json:"quantity"`
-		UnitPrice   int64  `json:"unit_price"`
+		ProductID int64 `json:"product_id"`
+		Quantity  int   `json:"quantity"`
 	} `json:"items"`
 }
 
 type OrderData struct {
-	ID          int64  `json:"id"`
-	OrderID     int64  `json:"order_id"`
-	OrderNo     string `json:"order_no"`
-	Status      int    `json:"status"`
-	TotalAmount int64  `json:"total_amount"`
+	ID          int64   `json:"id"`
+	OrderID     int64   `json:"order_id"`
+	OrderNo     string  `json:"order_no"`
+	Status      int     `json:"status"`
+	TotalAmount int64   `json:"total_amount"`
+	TotalAmountFloat float64 `json:"total_amount_float"`
 }
 
 type OrderResponse struct {
 	Code    int       `json:"code"`
 	Data    OrderData `json:"data"`
 	Message string    `json:"message"`
+}
+
+type OrderDetailResponse struct {
+	Code int `json:"code"`
+	Data struct {
+		ID          int64   `json:"id"`
+		OrderID     int64   `json:"order_id"`
+		OrderNo     string  `json:"order_no"`
+		Status      int     `json:"status"`
+		TotalAmount float64 `json:"total_amount"`
+		Items       []struct {
+			ProductID   int64   `json:"product_id"`
+			ProductName string  `json:"product_name"`
+			UnitPrice   float64 `json:"unit_price"`
+			Quantity    int     `json:"quantity"`
+			TotalPrice  float64 `json:"total_price"`
+		} `json:"items"`
+	} `json:"data"`
+	Message string `json:"message"`
 }
 
 type InventoryData struct {
@@ -65,6 +86,28 @@ type PaymentResponse struct {
 	Message string `json:"message"`
 }
 
+// Product types for product service integration
+type Product struct {
+	ProductID     int64  `json:"product_id"`
+	ProductName   string `json:"product_name"`
+	OriginalPrice int64  `json:"original_price"`
+	Status        int    `json:"status"`
+}
+
+type ProductResponse struct {
+	Code    int     `json:"code"`
+	Data    Product `json:"data"`
+	Message string  `json:"message"`
+}
+
+type UpdatePriceRequest struct {
+	OriginalPrice int64 `json:"original_price"`
+}
+
+type UpdateStatusRequest struct {
+	Status int `json:"status"`
+}
+
 var testResults []string
 
 func main() {
@@ -83,6 +126,8 @@ func main() {
 	testScenario1_NormalFlow()
 	testScenario2_InsufficientStock()
 	testScenario3_CancelOrder()
+	testScenario4_PriceChangeAffectsNewOrdersOnly()
+	testScenario5_OffSaleProductBlocksNewOrders()
 
 	// Summary
 	fmt.Println("\n====================================")
@@ -111,6 +156,7 @@ func waitForServices() {
 		OrderServiceURL + "/health",
 		InventoryServiceURL + "/api/v1/inventory/1",
 		PaymentServiceURL + "/health",
+		ProductServiceURL + "/health",
 	}
 
 	for _, url := range services {
@@ -144,17 +190,15 @@ func testScenario1_NormalFlow() {
 	}
 	fmt.Printf("  Initial stock: Available=%d, Reserved=%d\n", initialStock.Data.AvailableStock, initialStock.Data.ReservedStock)
 
-	// Step 2: Create order
+	// Step 2: Create order (only send product_id and quantity)
 	fmt.Println("Step 2: Create order")
 	orderReq := CreateOrderRequest{
 		UserID: 1001,
 		Items: []struct {
-			ProductID   int64  `json:"product_id"`
-			ProductName string `json:"product_name"`
-			Quantity    int    `json:"quantity"`
-			UnitPrice   int64  `json:"unit_price"`
+			ProductID int64 `json:"product_id"`
+			Quantity  int   `json:"quantity"`
 		}{
-			{ProductID: 1, ProductName: "iPhone 16", Quantity: 1, UnitPrice: 899900},
+			{ProductID: 1, Quantity: 1},
 		},
 	}
 
@@ -185,9 +229,15 @@ func testScenario1_NormalFlow() {
 
 	// Step 4: Process payment
 	fmt.Println("Step 4: Process payment")
+	// Get order details to find the actual total amount
+	orderDetail := getOrderDetail(getOrderID(order))
+	if orderDetail == nil {
+		testResults = append(testResults, "❌ Scenario 1: Failed to get order details")
+		return
+	}
 	payReq := PaymentRequest{
 		OrderNo:   order.Data.OrderNo,
-		Amount:    float64(order.Data.TotalAmount) / 100, // Convert cents to yuan
+		Amount:    orderDetail.Data.TotalAmount,
 		PayMethod: "credit_card",
 	}
 	payment := processPayment(payReq)
@@ -254,12 +304,10 @@ func testScenario2_InsufficientStock() {
 	orderReq := CreateOrderRequest{
 		UserID: 1001,
 		Items: []struct {
-			ProductID   int64  `json:"product_id"`
-			ProductName string `json:"product_name"`
-			Quantity    int    `json:"quantity"`
-			UnitPrice   int64  `json:"unit_price"`
+			ProductID int64 `json:"product_id"`
+			Quantity  int   `json:"quantity"`
 		}{
-			{ProductID: 999, ProductName: "Limited Item", Quantity: 1000, UnitPrice: 10000},
+			{ProductID: 999, Quantity: 1000},
 		},
 	}
 
@@ -327,12 +375,10 @@ func testScenario3_CancelOrder() {
 	orderReq := CreateOrderRequest{
 		UserID: 1001,
 		Items: []struct {
-			ProductID   int64  `json:"product_id"`
-			ProductName string `json:"product_name"`
-			Quantity    int    `json:"quantity"`
-			UnitPrice   int64  `json:"unit_price"`
+			ProductID int64 `json:"product_id"`
+			Quantity  int   `json:"quantity"`
 		}{
-			{ProductID: 2, ProductName: "MacBook Pro", Quantity: 2, UnitPrice: 1999900},
+			{ProductID: 2, Quantity: 2},
 		},
 	}
 
@@ -410,12 +456,206 @@ func testScenario3_CancelOrder() {
 	fmt.Println()
 }
 
+// Scenario 4: Price Change Affects New Orders Only
+// Create Order -> Change Product Price -> Create New Order -> Verify Old Order Keeps Historical Price
+func testScenario4_PriceChangeAffectsNewOrdersOnly() {
+	fmt.Println("📌 Scenario 4: Price Change Affects New Orders Only")
+	fmt.Println(strings.Repeat("-", 60))
+
+	// Step 1: Get product 1 initial price
+	fmt.Println("Step 1: Get product 1 initial price")
+	product := getProduct(1)
+	if product == nil {
+		testResults = append(testResults, "❌ Scenario 4: Failed to get product")
+		return
+	}
+	originalPrice := product.Data.OriginalPrice
+	fmt.Printf("  Product 1 original price: %d cents\n", originalPrice)
+
+	// Step 2: Create first order
+	fmt.Println("Step 2: Create first order")
+	orderReq := CreateOrderRequest{
+		UserID: 1001,
+		Items: []struct {
+			ProductID int64 `json:"product_id"`
+			Quantity  int   `json:"quantity"`
+		}{
+			{ProductID: 1, Quantity: 1},
+		},
+	}
+
+	order1 := createOrder(orderReq)
+	if order1 == nil {
+		testResults = append(testResults, "❌ Scenario 4: Failed to create first order")
+		return
+	}
+	fmt.Printf("  Order 1 created: ID=%d, OrderNo=%s\n", getOrderID(order1), order1.Data.OrderNo)
+
+	// Get order 1 details to capture the unit price
+	order1Detail := getOrderDetail(getOrderID(order1))
+	if order1Detail == nil {
+		testResults = append(testResults, "❌ Scenario 4: Failed to get order 1 details")
+		return
+	}
+	order1UnitPrice := order1Detail.Data.Items[0].UnitPrice
+	order1Total := order1Detail.Data.TotalAmount
+	fmt.Printf("  Order 1 unit price: %.2f, total: %.2f\n", order1UnitPrice, order1Total)
+
+	// Step 3: Update product price (increase by 10000 cents = 100 yuan)
+	fmt.Println("Step 3: Update product price")
+	newPrice := originalPrice + 10000
+	if err := updateProductPrice(1, newPrice); err != nil {
+		testResults = append(testResults, "❌ Scenario 4: Failed to update product price")
+		return
+	}
+	fmt.Printf("  Product price updated from %d to %d cents\n", originalPrice, newPrice)
+
+	// Step 4: Create second order (should use new price)
+	fmt.Println("Step 4: Create second order (should use new price)")
+	order2 := createOrder(orderReq)
+	if order2 == nil {
+		// Restore original price before failing
+		updateProductPrice(1, originalPrice)
+		testResults = append(testResults, "❌ Scenario 4: Failed to create second order")
+		return
+	}
+	fmt.Printf("  Order 2 created: ID=%d, OrderNo=%s\n", getOrderID(order2), order2.Data.OrderNo)
+
+	// Get order 2 details
+	order2Detail := getOrderDetail(getOrderID(order2))
+	if order2Detail == nil {
+		updateProductPrice(1, originalPrice)
+		testResults = append(testResults, "❌ Scenario 4: Failed to get order 2 details")
+		return
+	}
+	order2UnitPrice := order2Detail.Data.Items[0].UnitPrice
+	order2Total := order2Detail.Data.TotalAmount
+	fmt.Printf("  Order 2 unit price: %.2f, total: %.2f\n", order2UnitPrice, order2Total)
+
+	// Step 5: Verify old order keeps historical price
+	fmt.Println("Step 5: Verify old order keeps historical price")
+
+	// Check order 1 still has original price
+	order1Check := getOrderDetail(getOrderID(order1))
+	if order1Check == nil {
+		updateProductPrice(1, originalPrice)
+		testResults = append(testResults, "❌ Scenario 4: Failed to verify order 1 price")
+		return
+	}
+	if order1Check.Data.Items[0].UnitPrice != order1UnitPrice {
+		updateProductPrice(1, originalPrice)
+		testResults = append(testResults, "❌ Scenario 4: Order 1 price changed after product update")
+		return
+	}
+	fmt.Printf("  Order 1 still has original unit price: %.2f\n", order1Check.Data.Items[0].UnitPrice)
+
+	// Verify order 2 has new price
+	if order2UnitPrice <= order1UnitPrice {
+		updateProductPrice(1, originalPrice)
+		testResults = append(testResults, "❌ Scenario 4: Order 2 does not have increased price")
+		return
+	}
+	fmt.Printf("  Order 2 has new higher price: %.2f\n", order2UnitPrice)
+
+	// Step 6: Restore original price
+	fmt.Println("Step 6: Restore original price")
+	if err := updateProductPrice(1, originalPrice); err != nil {
+		testResults = append(testResults, "❌ Scenario 4: Failed to restore product price")
+		return
+	}
+	fmt.Println("  Original price restored")
+
+	// Cancel both orders to clean up
+	cancelOrder(getOrderID(order1))
+	cancelOrder(getOrderID(order2))
+
+	testResults = append(testResults, "✅ Scenario 4: Price Change Affects New Orders Only - PASSED")
+	fmt.Println()
+}
+
+// Scenario 5: Off-Sale Product Blocks New Orders
+// Create Order with On-Sale Product -> Set Product Off-Sale -> Try Create Order -> Should Fail
+func testScenario5_OffSaleProductBlocksNewOrders() {
+	fmt.Println("📌 Scenario 5: Off-Sale Product Blocks New Orders")
+	fmt.Println(strings.Repeat("-", 60))
+
+	// Step 1: Ensure product 3 is on sale
+	fmt.Println("Step 1: Ensure product 3 is on sale")
+	product := getProduct(3)
+	if product == nil {
+		testResults = append(testResults, "❌ Scenario 5: Failed to get product")
+		return
+	}
+	if product.Data.Status != 1 {
+		if err := updateProductStatus(3, 1); err != nil {
+			testResults = append(testResults, "❌ Scenario 5: Failed to set product on sale")
+			return
+		}
+		fmt.Println("  Product 3 set to on-sale")
+	} else {
+		fmt.Println("  Product 3 is already on-sale")
+	}
+
+	// Step 2: Create order with on-sale product (should succeed)
+	fmt.Println("Step 2: Create order with on-sale product")
+	orderReq := CreateOrderRequest{
+		UserID: 1001,
+		Items: []struct {
+			ProductID int64 `json:"product_id"`
+			Quantity  int   `json:"quantity"`
+		}{
+			{ProductID: 3, Quantity: 1},
+		},
+	}
+
+	order1 := createOrder(orderReq)
+	if order1 == nil {
+		testResults = append(testResults, "❌ Scenario 5: Failed to create order with on-sale product")
+		return
+	}
+	fmt.Printf("  Order created successfully: ID=%d, OrderNo=%s\n", getOrderID(order1), order1.Data.OrderNo)
+
+	// Step 3: Set product off-sale
+	fmt.Println("Step 3: Set product 3 off-sale")
+	if err := updateProductStatus(3, 0); err != nil {
+		testResults = append(testResults, "❌ Scenario 5: Failed to set product off-sale")
+		return
+	}
+	fmt.Println("  Product 3 is now off-sale")
+
+	// Step 4: Try to create order with off-sale product (should fail)
+	fmt.Println("Step 4: Try to create order with off-sale product")
+	order2 := createOrder(orderReq)
+	if order2 != nil {
+		// Restore product status before failing
+		updateProductStatus(3, 1)
+		cancelOrder(getOrderID(order2))
+		testResults = append(testResults, "❌ Scenario 5: Order with off-sale product should have failed")
+		return
+	}
+	fmt.Println("  Order creation correctly rejected for off-sale product")
+
+	// Step 5: Restore product on-sale status
+	fmt.Println("Step 5: Restore product on-sale status")
+	if err := updateProductStatus(3, 1); err != nil {
+		testResults = append(testResults, "❌ Scenario 5: Failed to restore product status")
+		return
+	}
+	fmt.Println("  Product 3 restored to on-sale")
+
+	// Cancel first order to clean up
+	cancelOrder(getOrderID(order1))
+
+	testResults = append(testResults, "✅ Scenario 5: Off-Sale Product Blocks New Orders - PASSED")
+	fmt.Println()
+}
+
 // Helper function to get order ID from response (handles both id and order_id fields)
 func getOrderID(order *OrderResponse) int64 {
 	if order.Data.OrderID != 0 {
 		return order.Data.OrderID
 	}
-	return getOrderID(order)
+	return order.Data.ID
 }
 
 // Helper functions
@@ -492,6 +732,28 @@ func getOrder(orderID int64) *OrderResponse {
 	return &result
 }
 
+func getOrderDetail(orderID int64) *OrderDetailResponse {
+	resp, err := http.Get(fmt.Sprintf("%s/api/v1/orders/%d", OrderServiceURL, orderID))
+	if err != nil {
+		fmt.Printf("  Error: %v\n", err)
+		return nil
+	}
+	defer resp.Body.Close()
+
+	var result OrderDetailResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		fmt.Printf("  Decode Error: %v\n", err)
+		return nil
+	}
+
+	if result.Code != 0 {
+		fmt.Printf("  API Error: code=%d, message=%s\n", result.Code, result.Message)
+		return nil
+	}
+
+	return &result
+}
+
 func processPayment(req PaymentRequest) *PaymentResponse {
 	body, _ := json.Marshal(req)
 	resp, err := http.Post(PaymentServiceURL+"/api/v1/payments", "application/json", bytes.NewBuffer(body))
@@ -520,4 +782,103 @@ func cancelOrder(orderID int64) bool {
 	defer resp.Body.Close()
 
 	return resp.StatusCode == 200
+}
+
+// Product service helper functions
+
+func getProduct(productID int64) *ProductResponse {
+	resp, err := http.Get(fmt.Sprintf("%s/api/v1/products/%d", ProductServiceURL, productID))
+	if err != nil {
+		fmt.Printf("  Error: %v\n", err)
+		return nil
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		fmt.Printf("  HTTP Error: %d\n", resp.StatusCode)
+		return nil
+	}
+
+	var result ProductResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		fmt.Printf("  Decode Error: %v\n", err)
+		return nil
+	}
+
+	if result.Code != 0 {
+		fmt.Printf("  API Error: code=%d, message=%s\n", result.Code, result.Message)
+		return nil
+	}
+
+	return &result
+}
+
+func updateProductPrice(productID int64, originalPrice int64) error {
+	reqBody := UpdatePriceRequest{OriginalPrice: originalPrice}
+	body, _ := json.Marshal(reqBody)
+
+	req, err := http.NewRequest("PUT", fmt.Sprintf("%s/api/v1/products/%d/price", ProductServiceURL, productID), bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("HTTP error: %d", resp.StatusCode)
+	}
+
+	var result struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return err
+	}
+
+	if result.Code != 0 {
+		return fmt.Errorf("API error: %s", result.Message)
+	}
+
+	return nil
+}
+
+func updateProductStatus(productID int64, status int) error {
+	reqBody := UpdateStatusRequest{Status: status}
+	body, _ := json.Marshal(reqBody)
+
+	req, err := http.NewRequest("PUT", fmt.Sprintf("%s/api/v1/products/%d/status", ProductServiceURL, productID), bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("HTTP error: %d", resp.StatusCode)
+	}
+
+	var result struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return err
+	}
+
+	if result.Code != 0 {
+		return fmt.Errorf("API error: %s", result.Message)
+	}
+
+	return nil
 }
