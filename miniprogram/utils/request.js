@@ -18,6 +18,18 @@ function getApiBaseUrl() {
   )
 }
 
+function unwrapResponseBody(body) {
+  if (body && typeof body === 'object' && 'code' in body) {
+    if (body.code === 0) {
+      return body.data
+    }
+
+    throw new Error(body.message || 'Business request failed')
+  }
+
+  return body
+}
+
 function request({ url, method = 'GET', data, header = {} }) {
   return new Promise((resolve, reject) => {
     wx.request({
@@ -31,12 +43,16 @@ function request({ url, method = 'GET', data, header = {} }) {
       success(res) {
         const { statusCode, data: body } = res
 
-        if (statusCode >= 200 && statusCode < 300) {
-          resolve(body)
+        if (statusCode < 200 || statusCode >= 300) {
+          reject(new Error(body?.message || `Request failed with status ${statusCode}`))
           return
         }
 
-        reject(new Error(body?.message || `Request failed with status ${statusCode}`))
+        try {
+          resolve(unwrapResponseBody(body))
+        } catch (error) {
+          reject(error)
+        }
       },
       fail(error) {
         reject(new Error(error.errMsg || 'Network request failed'))
@@ -47,5 +63,6 @@ function request({ url, method = 'GET', data, header = {} }) {
 
 module.exports = {
   getApiBaseUrl,
-  request
+  request,
+  unwrapResponseBody
 }
