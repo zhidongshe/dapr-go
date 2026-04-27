@@ -34,7 +34,7 @@ spec:
     spec:
       containers:
         - name: inventory-service
-          image: dapr-go-inventory-service:latest
+          image: dapr-go-inventory-service:20260427-211232
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8082

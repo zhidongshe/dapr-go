@@ -32,7 +32,7 @@ spec:
     spec:
       containers:
         - name: api-gateway
-          image: dapr-go-api-gateway:latest
+          image: dapr-go-api-gateway:20260427-211232
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8090

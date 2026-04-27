@@ -34,7 +34,7 @@ spec:
     spec:
       containers:
         - name: product-service
-          image: dapr-go-product-service:latest
+          image: dapr-go-product-service:20260427-211232
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8083
