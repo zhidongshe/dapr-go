@@ -23,7 +23,9 @@ function formatAddressText(address) {
     address.cityName,
     address.countyName,
     address.detailInfo
-  ].join('')
+  ].filter((segment) => typeof segment === 'string' && segment.trim())
+    .map((segment) => segment.trim())
+    .join('')
 }
 
 module.exports = {

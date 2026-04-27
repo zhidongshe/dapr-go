@@ -1,9 +1,26 @@
-const { API_BASE_URL } = require('./constants')
+const {
+  DEFAULT_API_BASE_URL,
+  API_BASE_URL_STORAGE_KEY
+} = require('./constants')
+
+function getApiBaseUrl() {
+  try {
+    const configuredBaseUrl = wx.getStorageSync(API_BASE_URL_STORAGE_KEY)
+
+    if (typeof configuredBaseUrl === 'string' && configuredBaseUrl.trim()) {
+      return configuredBaseUrl.trim().replace(/\/$/, '')
+    }
+  } catch (error) {
+    // Ignore storage access errors and fall back to the default placeholder.
+  }
+
+  return DEFAULT_API_BASE_URL.replace(/\/$/, '')
+}
 
 function request({ url, method = 'GET', data, header = {} }) {
   return new Promise((resolve, reject) => {
     wx.request({
-      url: `${API_BASE_URL}${url}`,
+      url: `${getApiBaseUrl()}${url}`,
       method,
       data,
       header: {
@@ -28,5 +45,6 @@ function request({ url, method = 'GET', data, header = {} }) {
 }
 
 module.exports = {
+  getApiBaseUrl,
   request
 }
