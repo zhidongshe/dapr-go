@@ -39,6 +39,12 @@ const router = createRouter({
           name: 'Inventory',
           component: () => import('@/views/inventory/index.vue'),
           meta: { title: '库存概览', icon: 'Box' }
+        },
+        {
+          path: 'products',
+          name: 'Products',
+          component: () => import('@/views/products/index.vue'),
+          meta: { title: '商品管理', icon: 'Goods' }
         }
       ]
     }

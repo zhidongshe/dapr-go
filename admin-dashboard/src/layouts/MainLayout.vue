@@ -30,6 +30,11 @@
           <el-icon><Box /></el-icon>
           <template #title>库存概览</template>
         </el-menu-item>
+
+        <el-menu-item index="/products">
+          <el-icon><Goods /></el-icon>
+          <template #title>商品管理</template>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 

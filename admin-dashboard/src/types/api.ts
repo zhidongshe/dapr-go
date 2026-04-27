@@ -99,3 +99,27 @@ export interface UserInfo {
   userId: number
   username: string
 }
+
+// 商品状态
+export enum ProductStatus {
+  OffSale = 0,
+  OnSale = 1
+}
+
+// 商品
+export interface Product {
+  product_id: number
+  product_name: string
+  original_price: number
+  status: ProductStatus
+  created_at: string
+  updated_at: string
+}
+
+// 商品列表参数
+export interface ProductListParams {
+  product_name?: string
+  status?: number
+  page?: number
+  pageSize?: number
+}
