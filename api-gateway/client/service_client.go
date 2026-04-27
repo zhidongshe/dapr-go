@@ -43,6 +43,11 @@ func getServiceURL(serviceName string) string {
 			return url
 		}
 		return "http://localhost:8082"
+	case "product":
+		if url := os.Getenv("PRODUCT_SERVICE_URL"); url != "" {
+			return url
+		}
+		return "http://localhost:8083"
 	default:
 		return ""
 	}
@@ -90,4 +95,9 @@ func ForwardGET(serviceName, path string, headers map[string]string) (*http.Resp
 // ForwardPOST 转发 POST 请求
 func ForwardPOST(serviceName, path string, body interface{}, headers map[string]string) (*http.Response, error) {
 	return ForwardRequest(serviceName, "POST", path, body, headers)
+}
+
+// ForwardPUT 转发 PUT 请求
+func ForwardPUT(serviceName, path string, body interface{}, headers map[string]string) (*http.Response, error) {
+	return ForwardRequest(serviceName, "PUT", path, body, headers)
 }
