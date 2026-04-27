@@ -36,7 +36,7 @@ spec:
     spec:
       containers:
         - name: order-service
-          image: dapr-go-order-service:20260427-211232
+          image: dapr-go-order-service:20260427-214715
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

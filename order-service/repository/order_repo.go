@@ -57,7 +57,7 @@ func (r *OrderRepository) CreateOrder(order *models.Order) error {
     for i := range order.Items {
         item := &order.Items[i]
         item.OrderID = order.ID
-        item.TotalPrice = float64(item.Quantity) * item.UnitPrice
+        item.TotalPrice = int64(item.Quantity) * item.UnitPrice
 
         _, err = tx.Exec(
             `INSERT INTO order_items (order_id, product_id, product_name, unit_price, quantity, total_price, created_at)
@@ -197,9 +197,9 @@ func (r *OrderRepository) ListOrders(userID uint64, status *int, limit, offset i
 }
 
 type OrderStatusCount struct {
-    Status int     `json:"status"`
-    Count  int64   `json:"count"`
-    Amount float64 `json:"amount"`
+    Status int   `json:"status"`
+    Count  int64 `json:"count"`
+    Amount int64 `json:"amount"` // 单位：分
 }
 
 func (r *OrderRepository) ListPendingOrders() ([]models.Order, error) {

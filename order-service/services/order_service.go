@@ -86,25 +86,22 @@ func (s *OrderService) CreateOrder(ctx context.Context, req *models.CreateOrderR
 			return nil, errors.New("product is off sale")
 		}
 
-		// Build order item using product service data
+		// Build order item using product service data (prices stored in cents)
 		items[i] = models.OrderItem{
 			ProductID:   uint64(product.ProductID),
 			ProductName: product.ProductName,
-			UnitPrice:   float64(product.OriginalPrice) / 100, // Convert cents to yuan
+			UnitPrice:   product.OriginalPrice, // Keep as cents
 			Quantity:    itemReq.Quantity,
-			TotalPrice:  float64(int64(itemReq.Quantity)*product.OriginalPrice) / 100, // Convert cents to yuan
+			TotalPrice:  int64(itemReq.Quantity) * product.OriginalPrice, // Keep as cents
 			CreatedAt:   time.Now(),
 		}
 		totalAmount += int64(itemReq.Quantity) * product.OriginalPrice
 	}
 
-	// Convert total amount from cents to yuan for storage
-	totalAmountYuan := float64(totalAmount) / 100
-
 	order := &models.Order{
 		OrderNo:     models.GenerateOrderNo(),
 		UserID:      req.UserID,
-		TotalAmount: totalAmountYuan,
+		TotalAmount: totalAmount, // Keep as cents
 		Status:      events.OrderStatusPending,
 		PayStatus:   events.PayStatusUnpaid,
 		Remark:      req.Remark,
@@ -122,7 +119,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, req *models.CreateOrderR
 		OrderID:     int64(order.ID),
 		OrderNo:     order.OrderNo,
 		UserID:      int64(order.UserID),
-		TotalAmount: order.TotalAmount,
+		TotalAmount: float64(order.TotalAmount),
 		Status:      order.Status,
 		CreatedAt:   order.CreatedAt,
 	}
