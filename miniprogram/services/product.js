@@ -28,7 +28,15 @@ function getProductDetail(productId) {
   return request({
     url: `/v1/products/${productId}`,
     method: 'GET'
-  }).then(mapProduct)
+  }).then((product) => {
+    const mapped = mapProduct(product)
+
+    if (Number(mapped.status) !== 1) {
+      throw new Error('商品已下架')
+    }
+
+    return mapped
+  })
 }
 
 module.exports = {

@@ -1,0 +1,68 @@
+<view class="container">
+  <view wx:if="{{loading}}" class="state-card card">
+    <text>结算信息加载中...</text>
+  </view>
+
+  <view wx:elif="{{error}}" class="state-card card">
+    <text class="state-title">暂时无法结算</text>
+    <text class="muted">{{error}}</text>
+    <button class="primary-button action-button" bindtap="handleGoHome">返回首页</button>
+  </view>
+
+  <block wx:else>
+    <view class="address-card card" bindtap="handleChooseAddress">
+      <view wx:if="{{address}}" class="address-content">
+        <text class="address-receiver">{{addressReceiver}}</text>
+        <text class="address-text">{{addressText}}</text>
+      </view>
+      <view wx:else class="address-empty">
+        <text class="address-placeholder">请选择收货地址</text>
+      </view>
+    </view>
+
+    <view class="product-card card">
+      <text class="section-title">商品信息</text>
+      <view class="row">
+        <text class="label">商品</text>
+        <text>{{product.product_name}}</text>
+      </view>
+      <view class="row">
+        <text class="label">单价</text>
+        <text>¥{{product.display_price}}</text>
+      </view>
+      <view class="row">
+        <text class="label">数量</text>
+        <text>{{quantity}}</text>
+      </view>
+      <view class="row total-row">
+        <text class="label">小计</text>
+        <text class="price">¥{{amountText}}</text>
+      </view>
+    </view>
+
+    <view class="summary-card card">
+      <view class="row">
+        <text class="label">商品金额</text>
+        <text>¥{{amountText}}</text>
+      </view>
+      <view class="row">
+        <text class="label">运费</text>
+        <text>免运费</text>
+      </view>
+      <view class="row total-row">
+        <text class="label">实付金额</text>
+        <text class="price">¥{{amountText}}</text>
+      </view>
+    </view>
+
+    <view class="submit-bar card">
+      <view class="submit-price">
+        <text class="muted">实付：</text>
+        <text class="price">¥{{amountText}}</text>
+      </view>
+      <button class="primary-button submit-button" bindtap="handleSubmitOrder" loading="{{submitting}}" disabled="{{submitting}}">
+        提交订单
+      </button>
+    </view>
+  </block>
+</view>

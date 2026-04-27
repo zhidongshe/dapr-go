@@ -28,7 +28,16 @@ function formatAddressText(address) {
     .join('')
 }
 
+function formatAddressReceiver(address) {
+  if (!address) {
+    return ''
+  }
+
+  return `${address.userName} ${address.telNumber}`
+}
+
 module.exports = {
   normalizeWechatAddress,
-  formatAddressText
+  formatAddressText,
+  formatAddressReceiver
 }
