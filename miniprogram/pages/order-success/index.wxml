@@ -1,0 +1,22 @@
+<view class="container">
+  <view class="success-card card">
+    <text class="success-icon">✓</text>
+    <text class="success-title">下单成功</text>
+    <text class="success-description">订单已创建成功，支付能力将在下一阶段接入。</text>
+
+    <view class="detail-row" wx:if="{{orderNo}}">
+      <text class="label">订单号</text>
+      <text>{{orderNo}}</text>
+    </view>
+    <view class="detail-row">
+      <text class="label">商品</text>
+      <text>{{productName}}</text>
+    </view>
+    <view class="detail-row">
+      <text class="label">订单金额</text>
+      <text class="price">¥{{amount}}</text>
+    </view>
+
+    <button class="primary-button home-button" bindtap="handleBackHome">返回首页</button>
+  </view>
+</view>

@@ -1,0 +1,31 @@
+page {
+  background: #f6f7fb;
+  color: #1f2937;
+  font-size: 28rpx;
+}
+
+.container {
+  padding: 24rpx;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 24rpx;
+  box-sizing: border-box;
+}
+
+.primary-button {
+  background: #2563eb;
+  color: #ffffff;
+  border-radius: 999rpx;
+  font-size: 28rpx;
+}
+
+.muted {
+  color: #6b7280;
+}
+
+.price {
+  color: #dc2626;
+  font-weight: 600;
+}
