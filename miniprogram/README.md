@@ -4,6 +4,7 @@
 - Import the `miniprogram` directory as a mini-program project.
 - Use `touristappid` for local UI development, then replace it with the real appid before release.
 
-## Backend base URL
-- Update `miniprogram/utils/constants.js` to point at the local `api-gateway` address.
-- For phone/device debugging, use a LAN-reachable host instead of `localhost`.
+## Current scaffold status
+- Task 1 only sets up the app shell files (`app.js`, `app.json`, `app.wxss`, `sitemap.json`).
+- No page files or shared config modules have been added yet.
+- Add the later task files before wiring backend URLs or page routing.

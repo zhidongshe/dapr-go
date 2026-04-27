@@ -1,9 +1,5 @@
 {
-  "pages": [
-    "pages/home/index",
-    "pages/checkout/index",
-    "pages/order-success/index"
-  ],
+  "pages": [],
   "window": {
     "navigationBarTitleText": "商城",
     "navigationBarBackgroundColor": "#ffffff",

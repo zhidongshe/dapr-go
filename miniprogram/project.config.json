@@ -11,7 +11,7 @@
     "minified": true
   },
   "compileType": "miniprogram",
-  "libVersion": "3.6.5",
+  "libVersion": "trial",
   "appid": "touristappid",
   "projectname": "oms-miniprogram",
   "condition": {}
