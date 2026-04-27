@@ -1,7 +1,8 @@
 {
   "pages": [
     "pages/home/index",
-    "pages/checkout/index"
+    "pages/checkout/index",
+    "pages/order-success/index"
   ],
   "window": {
     "navigationBarTitleText": "商城",

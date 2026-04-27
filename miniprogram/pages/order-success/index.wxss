@@ -1,0 +1,46 @@
+.success-card {
+  padding: 48rpx 32rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24rpx;
+}
+
+.success-icon {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: #16a34a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 52rpx;
+  font-weight: 700;
+}
+
+.success-title {
+  font-size: 36rpx;
+  font-weight: 700;
+}
+
+.success-description {
+  color: #6b7280;
+  text-align: center;
+}
+
+.detail-row {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.label {
+  color: #6b7280;
+}
+
+.home-button {
+  width: 100%;
+  margin-top: 16rpx;
+}
