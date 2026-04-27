@@ -4,12 +4,15 @@
 - Import the `miniprogram` directory as a mini-program project.
 - Use `touristappid` for local UI development, then replace it with the real appid before release.
 
-## Current scaffold status
-- Task 1 sets up the app shell files (`app.js`, `app.json`, `app.wxss`, `sitemap.json`).
-- Task 2 adds shared utility modules under `utils/` for requests, pricing, address formatting, and shared constants.
-- No page files have been added yet.
+## Backend base URL setup
+- Update `miniprogram/utils/constants.js` to point at the local `api-gateway` address.
+- For phone/device debugging, use a LAN-reachable host instead of `localhost`.
 
-## API base URL setup
-- `utils/request.js` reads the API base URL from local storage key `apiBaseUrl` before each request.
-- If nothing is configured yet, requests now throw an explicit configuration error instead of falling back to a placeholder host.
-- Write the deployed gateway base URL into storage before testing real API calls.
+## Manual verification
+1. Start the backend gateway and related services.
+2. Open the mini-program in WeChat DevTools.
+3. Confirm the home page loads on-sale products only.
+4. Tap `立即购买` and confirm checkout refreshes product detail.
+5. Select an address with `wx.chooseAddress`.
+6. Submit the order and confirm the success page shows order number, product name, and amount.
+7. Temporarily make the product off-sale and confirm checkout blocks order creation.
