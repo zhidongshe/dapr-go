@@ -5,6 +5,22 @@ import (
     "fmt"
 )
 
+// Product status constants (mirrored from product-service)
+const (
+    ProductStatusOffSale = 0
+    ProductStatusOnSale  = 1
+)
+
+// ProductSnapshot represents product data fetched from product service
+type ProductSnapshot struct {
+    ProductID     int64     `json:"product_id"`
+    ProductName   string    `json:"product_name"`
+    OriginalPrice int64     `json:"original_price"` // Price in cents
+    Status        int       `json:"status"`
+    CreatedAt     time.Time `json:"created_at"`
+    UpdatedAt     time.Time `json:"updated_at"`
+}
+
 type Order struct {
     ID           uint64      `json:"id" db:"id"`
     OrderNo      string      `json:"order_no" db:"order_no"`
@@ -38,10 +54,8 @@ type CreateOrderRequest struct {
 }
 
 type OrderItemRequest struct {
-    ProductID   uint64  `json:"product_id" binding:"required"`
-    ProductName string  `json:"product_name" binding:"required"`
-    UnitPrice   float64 `json:"unit_price" binding:"required,gt=0"`
-    Quantity    int     `json:"quantity" binding:"required,gt=0"`
+    ProductID uint64 `json:"product_id" binding:"required"`
+    Quantity  int    `json:"quantity" binding:"required,gt=0"`
 }
 
 type OrderResponse struct {

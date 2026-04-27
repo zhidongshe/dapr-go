@@ -39,10 +39,8 @@ func TestCreateOrderRequestValidation(t *testing.T) {
 				UserID: 10001,
 				Items: []OrderItemRequest{
 					{
-						ProductID:   101,
-						ProductName: "iPhone 15",
-						UnitPrice:   5999.00,
-						Quantity:    1,
+						ProductID: 101,
+						Quantity:  1,
 					},
 				},
 				Remark: "test remark",
@@ -55,16 +53,12 @@ func TestCreateOrderRequestValidation(t *testing.T) {
 				UserID: 10001,
 				Items: []OrderItemRequest{
 					{
-						ProductID:   101,
-						ProductName: "iPhone 15",
-						UnitPrice:   5999.00,
-						Quantity:    1,
+						ProductID: 101,
+						Quantity:  1,
 					},
 					{
-						ProductID:   102,
-						ProductName: "AirPods",
-						UnitPrice:   1999.00,
-						Quantity:    2,
+						ProductID: 102,
+						Quantity:  2,
 					},
 				},
 			},
@@ -84,9 +78,6 @@ func TestCreateOrderRequestValidation(t *testing.T) {
 			for _, item := range tt.req.Items {
 				if item.ProductID == 0 {
 					t.Error("ProductID should not be 0")
-				}
-				if item.UnitPrice <= 0 {
-					t.Errorf("UnitPrice should be > 0, got %v", item.UnitPrice)
 				}
 				if item.Quantity <= 0 {
 					t.Errorf("Quantity should be > 0, got %v", item.Quantity)
